@@ -1,0 +1,126 @@
+﻿@inject PlayerService _playerService;
+@inject TeamService _teamService;
+@inject NavigationManager navManager;
+@inject IDialogService DialogService
+
+
+<br/>
+<FluentHeader Style="width:100%">
+    @Header
+</FluentHeader>
+
+<FluentEditForm Model="InputPlayer" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <FluentValidationSummary />
+    <FluentNumberField @bind-Value="InputPlayer.Id" hidden></FluentNumberField>
+    <FluentTextField Label="Name" @bind-Value="InputPlayer.Name" Required></FluentTextField>
+    <FluentTextField Label="Surname" @bind-Value="InputPlayer.Surname" Required></FluentTextField>
+    <FluentDatePicker Label="Birth date" @bind-Value="InputPlayer.BirthDate" Required></FluentDatePicker>
+    @if(editPlayer)
+    {
+        <br />
+        <p>Member of: @if (InputPlayer.MemberOf != null)
+            {
+                <span>@InputPlayer.MemberOf.Name</span>
+            }</p>
+    }
+    <FluentSelect TOption="Team"
+              Label="Select team"
+              Items="@TeamList"
+              Id="team-listbox"
+              Width="200px"
+              Height="250px"
+              OptionValue="@(p => p.Id.ToString())"
+              OptionText="@(p => p.Name)"
+              @bind-Value="@SelectedTeamId"
+              @bind-SelectedOption="@SelectedTeam"/>
+    <br/>
+    <br/>
+
+    <FluentButton Type="ButtonType.Submit">Submit</FluentButton>
+    @if(editPlayer){
+     <FluentButton aria-label="Delete player" IconEnd="@(new Icons.Regular.Size16.Delete())" OnClick="@(()=>OpenDeleteDialogAsync(InputPlayer))" />
+    }
+
+</FluentEditForm>
+
+@code {
+    [Parameter]
+    public Player? InputPlayer { get; set; }
+    public bool editPlayer = false;
+    public List<Team> TeamList = new();
+    public string? SelectedTeamId;
+    public Team? SelectedTeam;
+    private string Header = string.Empty;
+    bool teamFirstLoad = true;
+
+    ConfirmDeleteModel _confirmDeleteModel = new()
+        {
+            Message = "Player"
+        };
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (InputPlayer == null)
+        {
+            InputPlayer = new Player();
+            Header = "Add new player";
+        }
+        else
+        {
+            editPlayer = true;
+            Header = "Edit player";
+            if(InputPlayer.MemberOf!=null){
+                SelectedTeamId = InputPlayer.Id.ToString();
+                SelectedTeam = InputPlayer.MemberOf;
+               
+            }
+        }
+
+        TeamList = await _teamService.GetTeams();
+    
+    }
+    
+    public async Task HandleValidSubmit()
+    {
+       
+        if (SelectedTeam!=null)
+        InputPlayer.MemberOf = SelectedTeam;
+
+        if (editPlayer)
+            await _playerService.UpdatePlayer(InputPlayer);
+        else
+            await  _playerService.AddPlayer(InputPlayer);
+
+        navManager.NavigateTo("/administration",true);
+    }
+
+    private async Task OpenDeleteDialogAsync(Player playerToDelete)
+    {
+
+        DialogParameters parameters = new()
+            {
+                Title = $"Delete this player?",
+                PrimaryAction = "Yes",
+                PrimaryActionEnabled = true,
+                SecondaryAction = "No",
+                Width = "500px",
+                TrapFocus = true,
+                Modal = true,
+                PreventScroll = true
+            };
+
+
+        IDialogReference dialog = await DialogService.ShowDialogAsync<ConfirmDelete>(_confirmDeleteModel, parameters);
+        DialogResult? result = await dialog.Result;
+
+
+        if (!result.Cancelled)
+        {
+            _playerService.DeletePlayer(InputPlayer.Id);
+            navManager.Refresh(true);
+        }
+
+    }
+}

@@ -1,0 +1,69 @@
+﻿@implements IDisposable
+@using System.Diagnostics
+@using System.Globalization
+
+<FluentStack Orientation="Microsoft.FluentUI.AspNetCore.Components.Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" >
+    <p style="font-family: 'Digital Numbers', sans-serif;font-size:4em;margin-top:50px;margin-bottom:30px;color:darkred"> @currentTime.ToString(@"hh\:mm\:ss")</p>
+   <FluentStack Orientation="Microsoft.FluentUI.AspNetCore.Components.Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center">
+        <FluentButton Type="ButtonType.Button" OnClick="PauseTime" Color="#dddd22">@pauseButtonText</FluentButton>
+        <FluentButton Type="ButtonType.Button" Color="#dd0000" OnClick="HandleClick">End Session</FluentButton>
+
+   </FluentStack>
+   
+
+</FluentStack>
+
+
+@code {
+    private System.Timers.Timer _timer;
+    private Stopwatch stopwatch=new();
+    private TimeSpan currentTime;
+    private bool isPaused = false;
+    private string pauseButtonText;
+   [Parameter] 
+    public EventCallback<string> OnVariableChange { get; set; }
+
+    private void HandleClick()
+    {
+      OnVariableChange.InvokeAsync("stop game");
+    }
+
+    protected override void OnInitialized()
+    {
+        stopwatch.Start();
+        currentTime = stopwatch.Elapsed;
+        _timer = new System.Timers.Timer(1000);
+        _timer.Elapsed += UpdateTime;
+        _timer.AutoReset = true;
+        _timer.Enabled = true;
+        pauseButtonText = "Pause game";
+    }
+
+    private void UpdateTime(object source, System.Timers.ElapsedEventArgs e)
+    {
+        currentTime = stopwatch.Elapsed;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void PauseTime()
+    {
+        if (!isPaused)
+        {
+            stopwatch.Stop();
+            isPaused = !isPaused;
+            pauseButtonText = "Resume game";
+        }
+
+        else
+        {
+            stopwatch.Start();
+            isPaused = !isPaused;
+            pauseButtonText = "Pause game";
+        }
+    }
+
+    public void Dispose()
+    {
+      _timer?.Dispose();
+    }
+}

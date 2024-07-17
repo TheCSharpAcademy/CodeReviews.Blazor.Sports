@@ -1,0 +1,30 @@
+﻿@inject PlayerService _playerService
+@inject NavigationManager navManager
+
+
+<h3>SelectPlayer</h3>
+
+<FluentSelect TOption="Player"
+              Items="@Players"
+              Id="player-listbox"
+              OptionValue="@(p => p.Id.ToString())"
+              OptionText="@(p => p.Name)"
+              @bind-SelectedOption="@selectedPlayer" />
+@if (selectedPlayer != null)
+{
+    <AddEditPlayer InputPlayer="@selectedPlayer"></AddEditPlayer>
+}
+
+
+
+@code {
+    public Player selectedPlayer;
+    public List<Player> Players;
+    public List<Team> Teams;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Players = await _playerService.GetPlayers();       
+    }
+
+}

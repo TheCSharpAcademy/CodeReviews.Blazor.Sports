@@ -1,0 +1,19 @@
+﻿@rendermode InteractiveServer
+
+
+<div class="navmenu">
+    <input type="checkbox" title="Menu expand/collapse toggle" id="navmenu-toggle" class="navmenu-icon" />
+    <label for="navmenu-toggle" class="navmenu-icon"><FluentIcon Value="@(new Icons.Regular.Size20.Navigation())" Color="Microsoft.FluentUI.AspNetCore.Components.Color.Fill" /></label>
+    <nav class="sitenav" aria-labelledby="main-menu" onclick="document.getElementById('navmenu-toggle').click();">
+        <FluentNavMenu Id="admin-menu" Collapsible="true" Width="250" Title="Administration menu" @bind-Expanded="expanded">
+            <FluentNavLink Href="addteam" Match="NavLinkMatch.All" Icon="@(new Icons.Regular.Size20.PeopleTeamAdd())" IconColor="Microsoft.FluentUI.AspNetCore.Components.Color.Accent">Add team</FluentNavLink>
+            <FluentNavLink Href="addplayer" Icon="@(new Icons.Regular.Size20.PeopleAdd())" IconColor="Microsoft.FluentUI.AspNetCore.Components.Color.Accent">Add player</FluentNavLink>
+            <FluentNavLink Href="teammanagement" Icon="@(new Icons.Regular.Size20.PeopleTeamToolbox())" IconColor="Microsoft.FluentUI.AspNetCore.Components.Color.Accent">Team management</FluentNavLink>
+            <FluentNavLink Href="playermanagement" Icon="@(new Icons.Regular.Size20.PeopleEdit())" IconColor="Microsoft.FluentUI.AspNetCore.Components.Color.Accent">Player management</FluentNavLink>
+        </FluentNavMenu>
+    </nav>
+</div>
+
+@code {
+    private bool expanded = true;
+}

@@ -1,0 +1,167 @@
+﻿@inject PlayerService _playerService
+@inject TeamService _teamService
+@inject IDialogService DialogService
+@inject NavigationManager navManager
+
+<h3>ManageTeam</h3>
+
+@if (SelectedTeam != null)
+{
+    <FluentEditForm Model="@SelectedTeam" OnValidSubmit="HandleValidSubmit">
+
+    <FluentTextField @bind-Value="SelectedTeam.Name" Label="Name"></FluentTextField>
+
+    <FluentStack Orientation="Microsoft.FluentUI.AspNetCore.Components.Orientation.Vertical"  >
+        <h5>Players in the team</h5>
+        <FluentSortableList Id="TeamPlayers"
+                            Fallback="false"
+                            Group="cloning"
+                            Clone="false"
+                            OnUpdate="@SortTeamPlayers"
+                            OnRemove="@RemovePlayer"
+                            Items="@SelectedTeam.Players"
+                            Style="Width:150px"
+                            Context="item"
+                            Class="teamplayerbox"
+                            >
+            <ItemTemplate>@item.Name</ItemTemplate>
+        </FluentSortableList>
+
+            <h5>Avaible players</h5>
+                <FluentSortableList Id="AvaiblePLayers"
+                                    Group="cloning"
+                                    Fallback="false"
+                                    Drop="true"
+                                    Clone="false"
+                                    OnRemove="@AvaiblePlayersRemove"
+                                    Items="@AvaiblePlayerList"
+                                    Style="Width:150px"
+                                    Sort="false"
+                                    Context="item">
+
+                    <ItemTemplate>@item.Name</ItemTemplate>
+                </FluentSortableList>
+            
+
+           
+        </FluentStack>
+    
+        <FluentButton Type="ButtonType.Submit">Submit</FluentButton>
+        <FluentButton aria-label="Delete team" IconEnd="@(new Icons.Regular.Size16.Delete())" OnClick="@(()=>OpenDeleteDialogAsync(SelectedTeam))" />
+</FluentEditForm>
+}
+
+@code {
+    [Parameter]
+    public Team? SelectedTeam { get; set; }
+    public List<Player> TeamPlayers = new();
+    [Parameter]
+    public List<Player> AvaiblePlayerList { get; set; }
+
+    ConfirmDeleteModel _confirmDeleteModel = new()
+        {
+            Message = "Team"
+        };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {      
+        if (SelectedTeam != null)
+            TeamPlayers = SelectedTeam.Players;
+    }
+
+
+    private async Task HandleValidSubmit()
+    {
+        foreach(var player in AvaiblePlayerList)
+        {
+            player.MemberOf = null;
+            await _playerService.UpdatePlayer(player);
+        }
+
+        await _teamService.UpdateTeam(SelectedTeam);
+    }
+
+    private void SortTeamPlayers(FluentSortableListEventArgs args)
+    {
+        if (args is null || args.OldIndex == args.NewIndex)
+        {
+            return;
+        }
+
+        var oldIndex = args.OldIndex;
+        var newIndex = args.NewIndex;
+
+        var items = SelectedTeam.Players;
+        var itemToMove = items[oldIndex];
+        items.RemoveAt(oldIndex);
+
+        if (newIndex < items.Count)
+        {
+            items.Insert(newIndex, itemToMove);
+        }
+        else
+        {
+            items.Add(itemToMove);
+        }
+
+    }
+
+    private void RemovePlayer(FluentSortableListEventArgs args)
+    {
+        if (args is null)
+        {
+            return;
+        }
+
+        var item = SelectedTeam.Players[args.OldIndex];
+        SelectedTeam.Players.RemoveAt(args.OldIndex);
+        var clone = item;
+        AvaiblePlayerList.Insert(args.NewIndex, clone);
+
+    }
+
+
+    private void AvaiblePlayersRemove(FluentSortableListEventArgs args)
+    {
+        if (args is null)
+        {
+            return;
+        }
+
+        var item = AvaiblePlayerList[args.OldIndex];
+
+        var clone = item;
+        AvaiblePlayerList.RemoveAt(args.OldIndex);
+        SelectedTeam.Players.Insert(args.NewIndex, clone);
+
+    }
+
+    private async Task OpenDeleteDialogAsync(Team teamToDelete)
+    {
+
+        DialogParameters parameters = new()
+            {
+                Title = $"Delete this team?",
+                PrimaryAction = "Yes",
+                PrimaryActionEnabled = true,
+                SecondaryAction = "No",
+                Width = "500px",
+                TrapFocus = true,
+                Modal = true,
+                PreventScroll = true
+            };
+
+
+        IDialogReference dialog = await DialogService.ShowDialogAsync<ConfirmDelete>(_confirmDeleteModel, parameters);
+        DialogResult? result = await dialog.Result;
+
+
+        if (!result.Cancelled)
+        {
+            _teamService.DeleteTeam(SelectedTeam.Id);
+            navManager.Refresh(true);
+        }
+
+    }
+
+}
