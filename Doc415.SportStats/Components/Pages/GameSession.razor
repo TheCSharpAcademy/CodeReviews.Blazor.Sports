@@ -199,11 +199,7 @@ else
 
     private void PlayerChanged()
     {
-        if (playerFirstLoad)
-        {
-            playerFirstLoad = !playerFirstLoad;
-            // return;
-        }
+    
         tempPlayer = IngamePlayers.FirstOrDefault(p => p.Id == int.Parse(tempPlayerId));
         selectedPlayer = tempPlayer;
         playerSelected = true;
@@ -211,11 +207,7 @@ else
 
     private void StatChanged()
     {
-        if (statFirstLoad)
-        {
-            statFirstLoad = !statFirstLoad;
-            // return;
-        }
+      
         SelectedStat = tempStat;
         statSelected = true;
     }
@@ -226,7 +218,6 @@ else
         selectedTeam = Teams[0];
         IngamePlayers = selectedTeam.Players;
 
-        // IngamePlayers.Insert(0, new Player() { Name="" , BirthDate=DateTime.Now});
         options = new ApexChartOptions<StatChartModel>
             {
                 Theme = new Theme
@@ -285,8 +276,7 @@ else
 
     private async void EndSession()
     {
-        CurrentGame.GameNotes = gameNotes;
-        _gameService.UpdateGame(CurrentGame);
+        await _gameService.UpdateGame(CurrentGame);
         CurrentGame = null;
         navManager.NavigateTo("/", true);
     }
@@ -357,8 +347,6 @@ else
         selectedLocation = string.Empty;
         selectedPlayer = null;
         SelectedStat = null;
-        //playerFirstLoad = true;
-        //statFirstLoad = true;
         tempPlayerId = "-1";
         tempPlayer = null;
         tempStat = null;
