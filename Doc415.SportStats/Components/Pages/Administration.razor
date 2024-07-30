@@ -1,0 +1,94 @@
+﻿@page "/administration"
+@rendermode InteractiveServer
+<FluentHeader>
+    Administration
+</FluentHeader>
+<FluentStack Orientation="Microsoft.FluentUI.AspNetCore.Components.Orientation.Horizontal">
+    <FluentStack Orientation="Microsoft.FluentUI.AspNetCore.Components.Orientation.Vertical" Style="height:600px;width:100px">
+        <FluentAppBar Style="height:100%;">
+
+            <FluentAppBarItem 
+                             OnClick="@(()=> status="addteam")"
+                              Match="NavLinkMatch.All"
+                              IconRest="AddTeamIcon()"
+                              IconActive="AddTeamIcon(active: true)"
+                              Text="Add team" />
+            <FluentAppBarItem 
+                          OnClick="@(()=> status="addplayer")"
+                              IconRest="AddPlayerIcon()"
+                              IconActive="AddPlayerIcon(active: true)"
+                              Text="Add Player" />
+            <FluentAppBarItem OnClick="@(()=> status="manageteam")"
+                              Match="NavLinkMatch.All"
+                              IconRest="AddTeamIcon()"
+                              IconActive="AddTeamIcon(active: true)"
+                              Text="Manage team" />
+            <FluentAppBarItem OnClick="@(()=> status="manageplayer")"
+                              IconRest="AddPlayerIcon()"
+                              IconActive="AddPlayerIcon(active: true)"
+                              Text="Manage Player" />
+        </FluentAppBar>
+    </FluentStack>
+
+    <FluentLayout>
+        @switch (status)
+        {
+            case "addteam":
+               <AddTeam />                ;
+                break;
+            case "addplayer":
+                <AddEditPlayer InputPlayer="null"></AddEditPlayer>
+                ;
+                break;
+            case "manageteam":
+               <SelectTeam></SelectTeam>
+                break;
+            case "manageplayer":
+               <SelectPlayer></SelectPlayer>
+                ;
+                break;
+            default:
+                <div class="alert alert-secondary">Select operation from admin menu</div>
+                ;
+                break;
+        }
+    </FluentLayout>
+
+    
+
+
+    
+    
+</FluentStack>
+
+
+@code {
+
+    private bool expanded = true;
+    string status = "";
+
+
+    private bool _showSearch = true;
+
+    private static Icon AddTeamIcon(bool active = false) =>
+        active ? new Icons.Filled.Size24.PeopleTeamAdd()
+               : new Icons.Regular.Size24.PeopleTeamAdd();
+
+    private static Icon AddPlayerIcon(bool active = false) =>
+        active ? new Icons.Filled.Size24.PeopleAdd()
+               : new Icons.Regular.Size24.PeopleAdd();
+
+    private static Icon StructuredLogsIcon(bool active = false) =>
+        active ? new Icons.Filled.Size24.SlideTextSparkle()
+               : new Icons.Regular.Size24.SlideTextSparkle();
+
+    private static Icon TracesIcon(bool active = false) =>
+        active ? new Icons.Filled.Size24.GanttChart()
+               : new Icons.Regular.Size24.GanttChart();
+
+    private static Icon MetricsIcon(bool active = false) =>
+        active ? new Icons.Filled.Size24.ChartMultiple()
+               : new Icons.Regular.Size24.ChartMultiple();
+
+    private void HandlePopover(bool visible) => Console.WriteLine($"Popover visibility changed to {visible}");
+}

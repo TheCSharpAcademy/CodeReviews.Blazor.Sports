@@ -1,0 +1,17 @@
+﻿@implements IDialogContentComponent<ConfirmDeleteModel>
+@rendermode InteractiveServer
+
+@if (Dialog != null)
+{
+    <FluentStack Orientation="Microsoft.FluentUI.AspNetCore.Components.Orientation.Vertical" Style="border: 1px solid red; padding: 10px">
+        <span>This will delete selected @Content.Message, are you sure?</span>
+    </FluentStack>
+}
+
+
+@code {
+    [Parameter]
+    public ConfirmDeleteModel Content { get; set; } = default!;
+    [CascadingParameter]
+    public FluentDialog? Dialog { get; set; }
+}

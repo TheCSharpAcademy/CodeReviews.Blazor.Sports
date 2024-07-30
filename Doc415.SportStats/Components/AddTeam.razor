@@ -1,0 +1,24 @@
+﻿@inject TeamService _teamService
+
+<br/>
+<FluentHeader Style="width:100%">
+    Add new team
+</FluentHeader>
+<FluentEditForm Model="newTeam" OnValidSubmit="HandleValidSubmit" >
+    <DataAnnotationsValidator />
+    <FluentValidationSummary />
+    <FluentTextField Label="Team Name" @bind-Value="newTeam.Name" Required/>
+    <br/>
+    <br/>
+    <FluentButton Type="ButtonType.Submit">Submit</FluentButton>
+</FluentEditForm>
+
+@code {
+    Team newTeam = new();
+
+    public async Task HandleValidSubmit()
+    {
+        await _teamService.AddTeam(newTeam);
+        newTeam = new();
+    }
+}

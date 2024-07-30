@@ -1,0 +1,356 @@
+﻿@page "/gamesession"
+@rendermode InteractiveServer
+@using Blazor_ApexCharts
+@using SportStats.Enums
+
+@inject TeamService _teamService
+@inject PlayerService _playerService
+@inject StatService _statService
+@inject GameService _gameService
+@inject NavigationManager navManager
+
+
+@if (!GameStarted)
+{
+
+    <h3>Select Team</h3>
+
+    <FluentSelect TOption="Team"
+                  Items="@Teams"
+                  Id="team-listbox"
+                  Disabled="@GameStarted"
+                  OptionValue="@(p => p.Id.ToString())"
+                  OptionText="@(p => p.Name)"
+                  @bind-SelectedOption="@tempTeam"
+                  @onchange="OnSelectedTeamChanged" />
+    <FluentTextField Label="Opponent" Immediate="true" @bind-Value="Opponent" Disabled="@OpponentInputDisabled"></FluentTextField>
+    <FluentButton Type="ButtonType.Button" OnClick="StartSession"> Start Game Session</FluentButton>
+}
+
+else
+{
+    <FluentStack Orientation="Microsoft.FluentUI.AspNetCore.Components.Orientation.Horizontal">
+
+
+        <FluentStack Orientation="Microsoft.FluentUI.AspNetCore.Components.Orientation.Vertical" VerticalGap="10" Width="62%">
+
+
+
+            <div Style="width:600;height:385px;background-image:url('court.jpg'); background-size:contain">
+
+                <FluentStack Orientation=" Microsoft.FluentUI.AspNetCore.Components.Orientation.Horizontal" HorizontalGap="1" Width="600">
+                    <FluentButton Id="A1" Type="ButtonType.Button" Appearance="Appearance.Outline" Style="width:199px;height:125px;" BackgroundColor="transparent" @onclick=@(()=>SelectLocation("A1"))></FluentButton>
+                    <FluentButton Id="B1" Type="ButtonType.Button" Appearance="Appearance.Outline" Style="width:199px;height:125px;" BackgroundColor="transparent" @onclick=@(()=>SelectLocation("B1"))></FluentButton>
+                    <FluentButton Id="C1" Type="ButtonType.Button" Appearance="Appearance.Outline" Style="width:199px;height:125px;" BackgroundColor="transparent" @onclick=@(()=>SelectLocation("C1"))></FluentButton>
+                </FluentStack>
+
+                <FluentStack Orientation=" Microsoft.FluentUI.AspNetCore.Components.Orientation.Horizontal" HorizontalGap="1" Width="600">
+                    <FluentButton Id="A2" Type="ButtonType.Button" Appearance="Appearance.Outline" Style="width:199px;height:120px;" BackgroundColor="transparent" @onclick=@(()=>SelectLocation("A2"))></FluentButton>
+                    <FluentButton Id="B2" Type="ButtonType.Button" Appearance="Appearance.Outline" Style="width:199px;height:120px;" BackgroundColor="transparent" @onclick=@(()=>SelectLocation("B2"))></FluentButton>
+                    <FluentButton Id="C2" Type="ButtonType.Button" Appearance="Appearance.Outline" Style="width:199px;height:120px;" BackgroundColor="transparent" @onclick=@(()=>SelectLocation("C2"))></FluentButton>
+                </FluentStack>
+
+                <FluentStack Orientation="Microsoft.FluentUI.AspNetCore.Components.Orientation.Horizontal" HorizontalGap="1" Width="600">
+                    <FluentButton Id="A3" Type="ButtonType.Button" Appearance="Appearance.Outline" Style="width:199px;height:120px;" BackgroundColor="transparent" @onclick=@(()=>SelectLocation("A3"))></FluentButton>
+                    <FluentButton Id="B3" Type="ButtonType.Button" Appearance="Appearance.Outline" Style="width:199px;height:120px;" BackgroundColor="transparent" @onclick=@(()=>SelectLocation("B3"))></FluentButton>
+                    <FluentButton Id="C3" Type="ButtonType.Button" Appearance="Appearance.Outline" Style="width:199px;height:120px;" BackgroundColor="transparent" @onclick=@(()=>SelectLocation("C3"))></FluentButton>
+                </FluentStack>
+
+            </div>
+
+            <div>
+                <FluentStack Orientation="Microsoft.FluentUI.AspNetCore.Components.Orientation.Horizontal">
+                    @if (locationSelected)
+                    {
+                        <FluentStack Id="playerselection">
+                            <FluentListbox TOption="Player"
+                                           Label="Select player"
+                                           Items="@IngamePlayers"
+                                           Id="player-listbox"
+                                           Height="300px"
+                                           Width="200px"
+                                           Multiple="false"
+                                           OptionValue="@(p => p.Id.ToString())"
+                                           OptionText="@(p => p.Surname + " " + p.Name)"
+                                           SelectedOptionChanged="PlayerChanged"
+                                           @bind-value="tempPlayerId">
+                                <OptionTemplate>
+                                    <FluentIcon Icon="Icons.Regular.Size16.Person" Slot="end" OnClick="@(() =>Console.WriteLine($"Icon for {@context.Surname} selected"))" />
+                                    @context.Surname (@context.Name)
+                                </OptionTemplate>
+                            </FluentListbox>
+                        </FluentStack>
+                    }
+
+
+                    @if (playerSelected)
+                    {
+                        <FluentStack Id="statselection">
+                            <FluentListbox TOption="string"
+                                           Label="Select stat"
+                                           Items="@StatList"
+                                           Id="stat-listbox"
+                                           Height="300px"
+                                           Width="200px"
+                                           OptionValue="@(p => p)"
+                                           OptionText="@(p => p)"
+                                           SelectedOptionChanged="StatChanged"
+                                           @bind-value="tempStat">
+                            </FluentListbox>
+                        </FluentStack>
+
+                    }
+
+                    @if (statSelected)
+                    {
+                        <FluentStack>
+                            <FluentButton Style="width:180px;height:180px" Type="ButtonType.Button" OnClick="HandleValidSubmit">Submit</FluentButton>
+                        </FluentStack>
+                    }
+                </FluentStack>
+
+            </div>
+        </FluentStack>
+
+        <FluentStack Orientation="Microsoft.FluentUI.AspNetCore.Components.Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" Style="border:dashed">
+            <GameTime OnVariableChange="HandleVariableChange"></GameTime>
+            <p style="font-family: 'Digital Numbers', sans-serif;font-size:2em;margin:20px;color:cadetblue">@selectedTeam.Name.ToUpper()</p>
+            <p style="font-family: 'Digital Numbers', sans-serif;font-size:3em;margin:20px;color:darkorange">vs</p>
+            <p style="font-family: 'Digital Numbers', sans-serif;font-size:2em;margin:25px;color:cadetblue">@Opponent.ToUpper()</p>
+        </FluentStack>
+
+
+        <FluentStack Orientation="Microsoft.FluentUI.AspNetCore.Components.Orientation.Vertical" Width="38%">
+            <ApexChart @ref="chart"
+                       TItem="StatChartModel"
+                       Title="Stats"
+                       Width="500"
+                       Height="400"
+                       Options=options>
+
+                @foreach (var player in series)
+                {
+                    <ApexPointSeries Name="@player.Id.ToString()"
+                                     Items="@player.StatList"
+                                     XValue="@(e=> e.Type)"
+                                     YValue="@(e => e.Count)"
+                                     SeriesType="SeriesType.Bar" />
+                }
+            </ApexChart>
+            <FluentEditForm Model="@CurrentGame" OnValidSubmit="UpdateNotes">
+            <FluentTextArea Rows="15" @bind-Value="@CurrentGame.GameNotes" Cols="72" Placeholder="Game notes"></FluentTextArea>
+           <FluentButton Type="ButtonType.Submit">Save Notes</FluentButton>
+            </FluentEditForm>
+            
+          
+            
+        </FluentStack>
+
+
+
+    </FluentStack>
+
+
+}
+
+@code {
+    string gameNotes = string.Empty;
+    JustifyContent Justification = JustifyContent.FlexStart;
+    List<PlayerChartModel> series = new();
+    Game CurrentGame = new();
+    Game NewGame = new();
+    int Spacing = 3;
+    bool open = true;
+    string selectedLocation = string.Empty;
+    List<Player>? IngamePlayers = new();
+    string SelectedPlayerId = string.Empty;
+    List<string> StatList = new List<string> { "","Pass", "Interception", "Shot", "Rebound", "Block" };
+    string SelectedStat = string.Empty;
+    private string status = "";
+    List<Player> players = new();
+    List<Team> Teams = new();
+    Team selectedTeam = new() { Players = new() };
+    bool locationSelected = false;
+    bool playerSelected = false;
+    Team tempTeam = new();
+    string tempTeamId = string.Empty;
+    bool GameStarted = false;
+    Player tempPlayer = new();
+    string tempPlayerId = "-1";
+    Player selectedPlayer = new();
+    bool playerFirstLoad = true;
+    bool statFirstLoad = true;
+    bool statSelected = false;
+    string tempStat = string.Empty;
+    string Opponent = string.Empty;
+    private ApexChart<StatChartModel> chart;
+    bool OpponentInputDisabled = false;
+    private ApexChartOptions<StatChartModel> options;
+
+    private void HandleVariableChange(string newValue)
+    {
+        EndSession();
+    }
+
+    private async Task UpdateNotes()
+    {
+        await _gameService.UpdateGame(CurrentGame);
+    }
+
+    private void PlayerChanged()
+    {
+    
+        tempPlayer = IngamePlayers.FirstOrDefault(p => p.Id == int.Parse(tempPlayerId));
+        selectedPlayer = tempPlayer;
+        playerSelected = true;
+    }
+
+    private void StatChanged()
+    {
+      
+        SelectedStat = tempStat;
+        statSelected = true;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Teams = await _teamService.GetTeams();
+        selectedTeam = Teams[0];
+        IngamePlayers = selectedTeam.Players;
+
+        options = new ApexChartOptions<StatChartModel>
+            {
+                Theme = new Theme
+                {
+                    Mode = Mode.Dark,
+                    Palette = PaletteType.Palette7
+                }
+            };
+    }
+
+
+    private void OnSelectedTeamChanged(ChangeEventArgs e)
+    {
+        tempTeamId = e.Value.ToString();
+        selectedTeam = Teams.FirstOrDefault(t => t.Id.ToString() == tempTeamId);
+        if (selectedTeam != null && selectedTeam.Id != -1)
+        {
+            IngamePlayers = selectedTeam.Players;
+
+        }
+    }
+
+    void SelectLocation(string location)
+    {
+        selectedLocation = location;
+        locationSelected = true;
+    }
+
+    private async void StartSession()
+    {
+        if (selectedTeam != null && !string.IsNullOrEmpty(Opponent) && selectedTeam.Id != -1)
+        {
+            foreach (var player in IngamePlayers)
+            {
+                var tempChartModel = new PlayerChartModel();
+                tempChartModel.Id = player.Id;
+                tempChartModel.StatList = new();
+                tempChartModel.StatList.Add(new StatChartModel() { Type = StatType.Pass });
+                tempChartModel.StatList.Add(new StatChartModel() { Type = StatType.Shot });
+                tempChartModel.StatList.Add(new StatChartModel() { Type = StatType.Block });
+                tempChartModel.StatList.Add(new StatChartModel() { Type = StatType.Rebound });
+                tempChartModel.StatList.Add(new StatChartModel() { Type = StatType.Interception });
+                series.Add(tempChartModel);
+            }
+
+            NewGame.DateTime = DateTime.Now;
+            NewGame.PlayedAgainst = Opponent;
+            NewGame.OwnTeam = selectedTeam;
+            CurrentGame = await _gameService.AddGame(NewGame);
+            OpponentInputDisabled = true;
+            GameStarted = true;
+            StateHasChanged();
+        }
+
+    }
+
+    private async void EndSession()
+    {
+        await _gameService.UpdateGame(CurrentGame);
+        CurrentGame = null;
+        navManager.NavigateTo("/", true);
+    }
+
+    private async void HandleValidSubmit()
+    {
+        BaseStat newStat;
+        switch (SelectedStat)
+        {
+            case "Pass":
+                {
+                    newStat = new Pass();
+                    var PlayerChart = series.Single(player => player.Id == selectedPlayer.Id);
+                    var Stat = PlayerChart.StatList.Single(Stat => Stat.Type == StatType.Pass);
+                    Stat.Count++;
+                }
+                break;
+            case "Shot":
+                {
+                    newStat = new Shot();
+                    var PlayerChart = series.Single(player => player.Id == selectedPlayer.Id);
+                    var Stat = PlayerChart.StatList.Single(Stat => Stat.Type == StatType.Shot);
+                    Stat.Count++;
+                }
+                break;
+            case "Interception":
+                {
+                    newStat = new Interception();
+                    var PlayerChart = series.Single(player => player.Id == selectedPlayer.Id);
+                    var Stat = PlayerChart.StatList.Single(Stat => Stat.Type == StatType.Interception);
+                    Stat.Count++;
+                }
+                break;
+            case "Rebound":
+                {
+                    newStat = new Rebound();
+                    var PlayerChart = series.Single(player => player.Id == selectedPlayer.Id);
+                    var Stat = PlayerChart.StatList.Single(Stat => Stat.Type == StatType.Rebound);
+                    Stat.Count++;
+                }
+                break;
+            case "Block":
+                {
+                    newStat = new Block();
+                    var PlayerChart = series.Single(player => player.Id == selectedPlayer.Id);
+                    var Stat = PlayerChart.StatList.Single(Stat => Stat.Type == StatType.Block);
+                    Stat.Count++;
+                }
+                break;
+            default:
+                return;
+                break;
+        }
+        newStat.BelongsTo = selectedPlayer;
+        newStat.Location = selectedLocation;
+        newStat.InGame = CurrentGame;
+        await _statService.AddStat(newStat);
+
+
+        await ResetFlags();
+    }
+
+    private async Task ResetFlags()
+    {
+        locationSelected = false;
+        playerSelected = false;
+        statSelected = false;
+        selectedLocation = string.Empty;
+        selectedPlayer = null;
+        SelectedStat = null;
+        tempPlayerId = "-1";
+        tempPlayer = null;
+        tempStat = null;
+        await chart!.UpdateSeriesAsync(true);
+        StateHasChanged();
+    }
+}

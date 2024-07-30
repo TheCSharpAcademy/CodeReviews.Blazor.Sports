@@ -1,0 +1,288 @@
+﻿@page "/reports"
+@rendermode InteractiveServer
+@using Blazor_ApexCharts
+@using SportStats.Enums
+
+@inject PlayerService _playerService
+@inject GameService _gameService
+@inject StatService _statService
+@inject NavigationManager navManager
+
+<h5>Select player for statistics</h5>
+<FluentSelect TOption="Player"
+              Items="@Players"
+              Id="player-listbox"
+              OptionValue="@(p => p.Id.ToString())"
+              OptionText="@(p => p.Name)"
+              @bind-SelectedOption="@selectBoxPlayer"
+              @onchange="OnSelectedPlayerChanged" />
+
+
+<FluentStack Orientation="Microsoft.FluentUI.AspNetCore.Components.Orientation.Horizontal">
+    <FluentStack Orientation="Microsoft.FluentUI.AspNetCore.Components.Orientation.Vertical">
+
+  
+    @if (selectedPlayer!=null && SeasonData.Blocks  !=null) 
+    {
+        <FluentStack Orientation="Microsoft.FluentUI.AspNetCore.Components.Orientation.Horizontal">
+        <ApexChart     TItem="BlockModel"
+                       Title="Block"
+                       Width="@chartWidth"
+                       Height="@chartHeight"
+                       @ref="@Season1"
+                       Options="@seasonOption1"
+                      >
+
+
+
+                <ApexPointSeries Name="Block"
+                                 Items="@SeasonData.Blocks"
+                                 XValue="@(e=> e.GameDate.Date.ToShortDateString())"
+                                 YValue="@(e => e.Count)"
+                                 SeriesType="SeriesType.Line" />
+
+            </ApexChart>
+
+        <ApexChart TItem="PassModel"
+                   Title="Pass"
+                   Width="@chartWidth"
+                   Height="@chartHeight"
+                   @ref="@Season2"
+                   Options="@seasonOption2">
+
+
+
+            <ApexPointSeries Name="Pass"
+                             Items="@SeasonData.Passes"
+                             XValue="@(e=> e.GameDate.Date.ToShortDateString())"
+                             YValue="@(e => e.Count)"
+                             SeriesType="SeriesType.Line" />
+
+        </ApexChart>
+        </FluentStack>
+        <FluentStack Orientation="Microsoft.FluentUI.AspNetCore.Components.Orientation.Horizontal">
+        <ApexChart TItem="InterceptionModel"
+                   Title="Interception"
+                   Width="@chartWidth"
+                   Height="@chartHeight"
+                   @ref="@Season3"
+                   Options="@seasonOption3">
+
+
+
+            <ApexPointSeries Name="Interception"
+                             Items="@SeasonData.Interceptions"
+                             XValue="@(e=> e.GameDate.Date.ToShortDateString())"
+                             YValue="@(e => e.Count)"
+                             SeriesType="SeriesType.Line" />
+
+        </ApexChart>
+
+        <ApexChart TItem="ReboundModel"
+                   Title="Rebound"
+                   Width="@chartWidth"
+                   Height="@chartHeight"
+                   @ref="@Season4"
+                   Options="@seasonOption4">
+
+
+
+            <ApexPointSeries Name="Rebound"
+                             Items="@SeasonData.Rebounds"
+                             XValue="@(e=> e.GameDate.Date.ToShortDateString())"
+                             YValue="@(e => e.Count)"
+                             SeriesType="SeriesType.Line" />
+
+        </ApexChart>
+        </FluentStack>
+        <FluentStack>
+        <ApexChart TItem="ShotModel"
+                   Title="Shot"
+                   Width="@chartWidth"
+                   Height="@chartHeight"
+                   @ref="@Season5"
+                   Options="@seasonOption5">
+
+
+
+            <ApexPointSeries Name="Shot"
+                             Items="@SeasonData.Shots"
+                             XValue="@(e=> e.GameDate.Date.ToShortDateString())"
+                             YValue="@(e => e.Count)"
+                             SeriesType="SeriesType.Line" />
+
+        </ApexChart>
+       
+        </FluentStack>
+           
+                
+    }
+    </FluentStack>
+   
+ <FluentStack Orientation="Microsoft.FluentUI.AspNetCore.Components.Orientation.Vertical">
+     <h5>Select game for ingame statistcs</h5>
+        <FluentSelect TOption="Game"
+                      Items="@Games"
+                      Id="game-listbox"
+                      OptionValue="@(p => p.Id.ToString())"
+                      OptionText="@(p => p.DateTime.ToShortDateString())"
+                      @bind-SelectedOption="@selectBoxGame"
+                      @onchange="OnSelectedGameChanged" />
+
+        @if (series.Count > 0)
+        {
+            <ApexChart @ref="chart"
+                       TItem="StatChartModel"
+                       Title="Stats"
+                       Width="500"
+                       Height="400"
+                       Options=options>
+
+                @if (series != null)
+                {
+                    foreach (var player in series)
+                    {
+                        <ApexPointSeries Name="@stats.Name.ToString()"
+                                         Items="@stats.StatList"
+                                         XValue="@(e=> e.Type)"
+                                         YValue="@(e => e.Count)"
+                                         SeriesType="SeriesType.Bar" />
+                    }
+
+                }
+            </ApexChart>
+        }
+
+    </FluentStack>
+
+ </FluentStack>
+
+
+@code {
+    private string referenceName = string.Empty;
+    private int chartWidth = 350;
+    private int chartHeight = 250;
+    private int index;
+    private Player selectBoxPlayer = new();
+    private Player selectedPlayer=new();
+    private List<Player> Players=new();
+    private List<PlayerChartModel> ChartList;
+    private List<Game> Games = new();
+    private Game selectedGame = new();
+    private Game selectBoxGame = new();
+    private PlayerChartModel stats;
+    private ApexChart<StatChartModel> chart;
+    private ApexChart<BlockModel> Season1;
+    private ApexChart<PassModel> Season2;
+    private ApexChart<InterceptionModel> Season3;
+    private ApexChart<ReboundModel> Season4;
+    private ApexChart<ShotModel> Season5;
+
+    private ApexChartOptions<StatChartModel> options;
+    private ApexChartOptions<BlockModel> seasonOption1;
+    private ApexChartOptions<PassModel> seasonOption2;
+    private ApexChartOptions<InterceptionModel> seasonOption3;
+    private ApexChartOptions<ReboundModel> seasonOption4;
+    private ApexChartOptions<ShotModel> seasonOption5;
+    private List<PlayerChartModel> series = new();
+    private SeasonDataModel SeasonData = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Players = await _playerService.GetPlayers();
+        Players.Insert(0,new Player());
+        options = new ApexChartOptions<StatChartModel>
+            {
+                Theme = new Theme
+                {
+                    Mode = Mode.Dark,
+                    Palette = PaletteType.Palette7
+                }
+            };
+
+
+        seasonOption1 = new ApexChartOptions<BlockModel>
+            {
+                Theme = new Theme
+                {
+                    Mode = Mode.Dark,
+                    Palette = PaletteType.Palette1
+                }              
+            };
+
+        seasonOption2 = new ApexChartOptions<PassModel>
+            {
+                Theme = new Theme
+                {
+                    Mode = Mode.Dark,
+                    Palette = PaletteType.Palette2
+                }
+            };
+
+        seasonOption3 = new ApexChartOptions<InterceptionModel>
+            {
+                Theme = new Theme
+                {
+                    Mode = Mode.Dark,
+                    Palette = PaletteType.Palette3
+                }
+            };
+
+        seasonOption4 = new ApexChartOptions<ReboundModel>
+            {
+                Theme = new Theme
+                {
+                    Mode = Mode.Dark,
+                    Palette = PaletteType.Palette4
+                }
+            };
+
+        seasonOption5 = new ApexChartOptions<ShotModel>
+            {
+                Theme = new Theme
+                {
+                    Mode = Mode.Dark,
+                    Palette = PaletteType.Palette5
+                }
+            };
+    }
+
+    private async Task OnSelectedPlayerChanged(ChangeEventArgs e)
+    {
+        var tempPlayerId = e.Value.ToString();
+        selectedPlayer = Players.FirstOrDefault(p => p.Id.ToString() == tempPlayerId);
+        if (selectedPlayer != null)
+        {
+            Games = await _gameService.GetGamesForPlayer(selectedPlayer);
+            SeasonData = await _statService.GetPlayerSeasonData(selectedPlayer);
+            series.Clear();
+            StateHasChanged();
+            await Season1!.UpdateSeriesAsync(true);
+            await Season2!.UpdateSeriesAsync(true);
+            await Season3!.UpdateSeriesAsync(true);
+            await Season4!.UpdateSeriesAsync(true);
+            await Season5!.UpdateSeriesAsync(true);
+
+
+        }
+       
+    }
+
+    private async Task OnSelectedGameChanged(ChangeEventArgs e)
+    {
+
+        var tempGameId = e.Value.ToString();
+        selectedGame = Games.FirstOrDefault(p => p.Id.ToString() == tempGameId);
+        if (selectedGame != null)
+        {
+            stats = await _statService.GetPlayerStatsInGameForChart(selectedPlayer, selectedGame);
+            series.Clear();
+            series.Add(stats);
+        }  
+        StateHasChanged();
+        await chart!.UpdateSeriesAsync(true);
+           
+    }
+
+
+}
