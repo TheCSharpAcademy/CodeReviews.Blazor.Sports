@@ -1,0 +1,86 @@
+﻿@inherits LayoutComponentBase
+
+<main>
+    <FluentLayout>
+        <FluentHeader>
+            @ClubName
+            
+            <FluentSpacer />
+            
+            <FluentButton Appearance="Appearance.Outline" OnClick="ChangeTheme" Title="@(Mode == DesignThemeModes.Light ? "Switch to Dark Mode" : "Switch to Light Mode")">
+                @if (Mode == DesignThemeModes.Light)
+                {
+                    <FluentIcon Value="@(new Icons.Regular.Size20.WeatherMoon())" Title="Dark" Color="Color.Fill" />
+                }
+                else
+                {
+                    <FluentIcon Value="@(new Icons.Regular.Size20.WeatherSunny())" Title="Light" Color="Color.Fill" />
+                }
+            </FluentButton>
+        </FluentHeader>
+        <FluentStack Class="main" Orientation="Orientation.Horizontal" Width="100%">
+            <NavMenu />
+            <FluentBodyContent Class="body-content">
+                <div class="content">
+                    @Body
+                </div>
+            </FluentBodyContent>
+        </FluentStack>
+        <FluentFooter>
+                &copy; @DateTime.Now.Year Chris Carter
+            <FluentSpacer />
+            <FluentAnchor Appearance="Appearance.Hypertext" Href="https://github.com/chrisjamiecarter/sports-statistics" Target="_blank">
+                GitHub
+            </FluentAnchor>
+        </FluentFooter>
+    </FluentLayout>
+
+    <FluentDesignTheme @bind-Mode="@Mode" OnLoaded="OnLoaded" StorageName="theme" />
+    <FluentDialogProvider />
+    <FluentMenuProvider />
+    <FluentToastProvider MaxToastCount="10" Position="ToastPosition.BottomCenter" />
+    <FluentTooltipProvider />
+</main>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    public DesignThemeModes Mode { get; set; }
+
+    private string ClubName { get; set; } = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ClubName = await ClubNameService.GetClubNameAsync();
+    }
+
+    private void OnLoaded(LoadedEventArgs e)
+    {
+        if (e.Mode == DesignThemeModes.System)
+        {
+            Mode = e.IsDark ? DesignThemeModes.Dark : DesignThemeModes.Light;
+        }
+    }
+
+    private async Task ChangeTheme()
+    {
+        switch (Mode)
+        {
+            case DesignThemeModes.Light:
+                Mode = DesignThemeModes.Dark;
+                break;
+            case DesignThemeModes.Dark:
+                Mode = DesignThemeModes.Light;
+                break;
+            default:
+                Mode = DesignThemeModes.System;
+                break;
+        }
+        
+        await Task.CompletedTask;
+    }
+}

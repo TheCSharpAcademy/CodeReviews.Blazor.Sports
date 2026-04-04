@@ -1,0 +1,114 @@
+﻿@if (IsLoading)
+{
+    <SkeletonCard />
+    return;
+}
+
+<FluentCard>
+    <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Stretch">
+
+        <FluentStack VerticalAlignment="VerticalAlignment.Center">
+            <FluentIcon Value="@Icon" Color="Color.Accent" />
+            <FluentLabel Weight="FontWeight.Bold" Typo="Typography.H3">@Title</FluentLabel>
+        </FluentStack>
+                
+        <FluentDivider />
+        
+        @if (Fixture is null)
+        {
+            <FluentSpacer />
+            <FluentStack Orientation="Orientation.Vertical" VerticalAlignment="VerticalAlignment.Center" HorizontalAlignment="HorizontalAlignment.Center">
+                <FluentSpacer />
+                <FluentIcon Value="@(new Icons.Regular.Size28.CalendarEmpty())" Color="Color.Accent" />
+                <FluentSpacer />
+                <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold">@EmptyMessage</FluentLabel>
+                <FluentSpacer />
+            </FluentStack>
+            <FluentSpacer />
+        }
+        else
+        {
+            <FluentSpacer />
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.SpaceBetween">
+                <FluentLabel Typo="Typography.Subject">@Fixture.KickoffTimeLocal.ToString("ddd dd MMM")</FluentLabel>
+                <FluentBadge Appearance="Appearance.Neutral">
+                    @Fixture.CompetitionName
+                    <FluentSpacer Width="2" />
+                    <FluentIcon Value="@(new Icons.Regular.Size16.Trophy())" />
+                </FluentBadge>
+            </FluentStack>
+            <FluentSpacer />
+            <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" Style="">
+                
+                <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+                    
+                    <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.End">
+                        <FluentLabel Typo="Typography.H5" Alignment="HorizontalAlignment.End">@GetHomeTeamName()</FluentLabel>
+                    </FluentStack>
+
+                    <!-- Center: Score (colored) or Kickoff Time (not colored) -->
+                    @if (IsPlayedOrInProgress)
+                    {
+                        <FluentBadge Appearance="Appearance.Neutral" Fill="@GetScoreBadgeFill()">
+                            <FluentLabel Weight="FontWeight.Bold" Typo="Typography.H4" Color="Color.Custom" CustomColor="white" Style="margin: 0.25rem 0.5rem;">
+                                @Fixture.HomeGoals - @Fixture.AwayGoals
+                            </FluentLabel>
+                        </FluentBadge>
+                    }
+                    else
+                    {
+                        <FluentBadge Appearance="Appearance.Neutral">
+                            <FluentLabel Weight="FontWeight.Bold" Typo="Typography.H4" Style="margin: 0.25rem 0.5rem;">
+                                @Fixture.KickoffTimeLocal.ToString("HH:mm")
+                            </FluentLabel>
+                        </FluentBadge>
+                    }
+
+                    <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Start">
+                        <FluentLabel Typo="Typography.H5" Alignment="HorizontalAlignment.Start">@GetAwayTeamName()</FluentLabel>
+                    </FluentStack>
+                </FluentStack>
+
+            </FluentStack>
+            <FluentSpacer />
+        }
+    </FluentStack>
+</FluentCard>
+
+@code {
+    [Parameter]
+    public bool IsLoading { get; set; } = true;
+
+    [Parameter]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public Icon? Icon { get; set; }
+
+    [Parameter]
+    public FixtureCardDto? Fixture { get; set; }
+
+    [Parameter]
+    public string ClubName { get; set; } = string.Empty;
+
+    [Parameter]
+    public string EmptyMessage { get; set; } = "No fixture";
+
+    private bool IsPlayedOrInProgress =>
+        Fixture?.OutcomeOrStatus == Outcome.Win.Name ||
+        Fixture?.OutcomeOrStatus == Outcome.Draw.Name ||
+        Fixture?.OutcomeOrStatus == Outcome.Loss.Name ||
+        Fixture?.OutcomeOrStatus == Status.InProgress.Name;
+
+    private string GetHomeTeamName() =>
+        Fixture?.Location == Location.Home.Name || Fixture?.Location == Location.Neutral.Name
+            ? ClubName
+            : Fixture?.Opponent ?? string.Empty;
+
+    private string GetAwayTeamName() =>
+        Fixture?.Location == Location.Home.Name || Fixture?.Location == Location.Neutral.Name
+            ? Fixture?.Opponent ?? string.Empty
+            : ClubName;
+
+    private string GetScoreBadgeFill() => Fixture?.OutcomeOrStatus?.ToLower() ?? "";
+}

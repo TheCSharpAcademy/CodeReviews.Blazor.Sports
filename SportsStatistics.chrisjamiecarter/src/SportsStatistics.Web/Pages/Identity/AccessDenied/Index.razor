@@ -1,0 +1,18 @@
+﻿@page "/access-denied"
+
+<PageTitle>Access Denied</PageTitle>
+
+<FluentCard>
+    <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+        <FluentIcon Value="@(new Icons.Regular.Size48.ShieldError())" Color="Color.Error" />
+        <FluentLabel Typo="Typography.H2">Access Denied</FluentLabel>
+        <FluentSpacer />
+        <FluentLabel>You do not have permission to access this page.</FluentLabel>
+        <FluentSpacer />
+        <FluentButton Appearance="Appearance.Accent"
+                      IconStart="@(new Icons.Regular.Size20.Home())" 
+                      OnClick="@(() => Navigation.NavigateTo(Routes.Home))">
+                      Return to Home
+        </FluentButton>
+    </FluentStack>
+</FluentCard>

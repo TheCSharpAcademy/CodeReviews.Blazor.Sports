@@ -1,0 +1,68 @@
+﻿<FluentStack Orientation="Orientation.Horizontal"
+             HorizontalAlignment="HorizontalAlignment.SpaceBetween" 
+             VerticalAlignment="VerticalAlignment.Center">
+
+    <FluentStack Orientation="Orientation.Horizontal"
+                 HorizontalAlignment="HorizontalAlignment.SpaceBetween">
+        <FluentLabel>@Label</FluentLabel>
+        <FluentLabel>@Value</FluentLabel>
+    </FluentStack>
+        
+    <div style="width: 1px; background-color: var(--neutral-stroke-rest); align-self: stretch;" />
+
+    <FluentProgress Id="@Identifier"
+                    Value="@((int)Percentage)"
+                    Max="100"
+                    Color="@Color"
+                    Stroke="ProgressStroke.Large"
+                    Width="100%" />
+
+    <FluentTooltip Anchor="@Identifier"
+                   Position="TooltipPosition.Top"
+                   UseTooltipService="false">
+        @PercentageDisplay
+    </FluentTooltip>
+
+</FluentStack>
+
+@code {
+    [Parameter]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter]
+    public int Value { get; set; }
+
+    [Parameter]
+    public double Percentage { get; set; }
+
+    [Parameter]
+    public bool IsPositive { get; set; }
+
+    private string Color => IsPositive
+        ? GetPostiveProgressColor(Percentage)
+        : GetNegativeProgressColor(Percentage);
+
+    private string Identifier = $"progress-{Guid.NewGuid():N}";
+
+    private string PercentageDisplay => $"{Percentage:N1}%";
+    
+    private string GetPostiveProgressColor(double value)
+    {
+        return value switch
+        {
+            >= 75 => "var(--success)",
+            <= 25 => "var(--error)",
+            _ => "var(--warning)"
+        };
+    }
+
+    private string GetNegativeProgressColor(double value)
+    {
+        return value switch
+        {
+            >= 75 => "var(--error)",
+            <= 25 => "var(--success)",
+            _ => "var(--warning)"
+        };
+    }
+}

@@ -1,0 +1,19 @@
+<FluentStack HorizontalAlignment="HorizontalAlignment.Stretch" Orientation="Orientation.Vertical">
+
+    <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold">
+        Match Overview
+    </FluentLabel>
+
+    <FluentDataGrid Items="@OrderedEvents" ShowHover="@true">
+        <PropertyColumn Property="@(matchEvent => matchEvent.MinuteDisplay)" Title="Minute" />
+        <PropertyColumn Property="@(matchEvent => matchEvent.EventTypeDisplay)" Title="Event" />
+        <PropertyColumn Property="@(matchEvent => matchEvent.OccurredAtUtc.ToLocalTime())" Title="Time" />
+    </FluentDataGrid>
+
+</FluentStack>
+
+@code {
+    [Parameter] public List<DisplayMatchEventDto> MatchEvents { get; set; } = [];
+
+    private IQueryable<DisplayMatchEventDto> OrderedEvents => MatchEvents.AsQueryable();
+}

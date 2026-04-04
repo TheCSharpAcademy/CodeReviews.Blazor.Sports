@@ -1,0 +1,118 @@
+﻿<FluentGrid>
+    <FluentGridItem xs="12" sm="12" md="12" lg="6" xl="6">
+        <FluentCard AreaRestricted="false">
+            <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Stretch">
+                
+                <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                    <FluentIcon Value="@(new Icons.Regular.Size24.PeopleSettings())" Color="Color.Accent" />
+                    <FluentLabel Weight="FontWeight.Bold" Typo="Typography.Header">@HeaderText</FluentLabel>
+                </FluentStack>
+
+                <FluentDivider />
+
+                <EditForm Model="@Input" OnValidSubmit="OnValidSubmitAsync" FormName="player-form" style="width: 100%">
+                    <FluentValidator />
+
+                    <FluentStack Orientation="Orientation.Vertical">
+                        <div class="full-width">
+                            <FluentTextField Name="Input.Name" @bind-Value="Input.Name" AutoComplete="player-name" Required="true" Placeholder="Name" Label="Name" Style="width: 100%" />
+                            <FluentValidationMessage For="() => Input.Name" class="text-danger" />
+                        </div>
+                        <div class="full-width">
+                            <FluentDatePicker Name="Input.DateOfBirth" @bind-Value="Input.DateOfBirth" Required="true" Label="Date of Birth" Style="width: 100%" />
+                            <FluentValidationMessage For="() => Input.DateOfBirth" class="text-danger" />
+                        </div>
+                        <div class="full-width">
+                            <FluentTextField Name="Input.Nationality" @bind-Value="Input.Nationality" AutoComplete="player-nationality" Required="true" Placeholder="Nationality" Label="Nationality" Style="width: 100%" />
+                            <FluentValidationMessage For="() => Input.Nationality" class="text-danger" />
+                        </div>
+                        <div class="full-width">
+                            <FluentNumberField Name="Input.SquadNumber" @bind-Value="Input.SquadNumber" Required="true" Label="Squad Number" Min="1" />
+                            <FluentValidationMessage For="() => Input.SquadNumber" class="text-danger" />
+                        </div>
+                        <div class="full-width">
+                            <FluentSelect Id="PositionSelect"
+                                          Name="Input.Position"
+                                          TOption=PositionOptionDto
+                                          Label="Position"
+                                          Items="PositionOptions"
+                                          Width="100%"
+                                          Placeholder="Select a position..."
+                                          OptionText="(p => p.Name)"
+                                          @bind-SelectedOption="Input.Position"
+                                          Required="!IsUpdateMode" />
+                            <FluentValidationMessage For="() => Input.Position" class="text-danger" />
+                        </div>
+                        <div class="full-width">
+                            <FluentCheckbox Name="Input.LeftClub" @bind-Value="Input.LeftClub" Label="Left Club" />
+                            <FluentValidationMessage For="() => Input.LeftClub" class="text-danger" />
+                        </div>
+                        <FluentSpacer />
+                        <FluentStack Orientation="Orientation.Horizontal">
+                            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="width: 100%" Loading="IsSubmitting">
+                                @SubmitButtonText
+                            </FluentButton>
+                            <FluentButton Type="ButtonType.Button" Appearance="Appearance.Stealth" Style="width: 100%" OnClick="OnCancelAsync">
+                                Cancel
+                            </FluentButton>
+                        </FluentStack>
+                    </FluentStack>
+                </EditForm>
+
+            </FluentStack>
+        </FluentCard>
+    </FluentGridItem>
+</FluentGrid>
+
+@code {
+    private bool IsSubmitting = false;
+    private IEnumerable<PositionOptionDto> PositionOptions = Position.List.Select(p => p.ToDto());
+
+    [Parameter]
+    public PlayerDto? SelectedPlayer { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    [Parameter]
+    public EventCallback<PlayerFormModel> OnSubmit { get; set; }
+
+    [SupplyParameterFromForm]
+    private PlayerFormModel Input { get; set; } = default!;
+
+    private bool IsUpdateMode => SelectedPlayer is not null;
+
+    private string HeaderText => $"{(IsUpdateMode ? "Edit" : "Add")} Player";
+
+    private string SubmitButtonText => IsUpdateMode ? "Update" : "Create";
+    
+    protected override void OnInitialized()
+    {
+        Input ??= new();
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (!IsSubmitting && SelectedPlayer is not null)
+        {
+            Input = SelectedPlayer.ToInputModel(PositionOptions);
+        }
+    }
+
+    private async Task OnCancelAsync()
+    {
+        await OnCancel.InvokeAsync();
+    }
+
+    private async Task OnValidSubmitAsync(EditContext context)
+    {
+        IsSubmitting = true;
+
+        if (context.Model is PlayerFormModel player)
+        {
+            await OnSubmit.InvokeAsync(player);
+        }
+
+        IsSubmitting = false;
+    }
+}

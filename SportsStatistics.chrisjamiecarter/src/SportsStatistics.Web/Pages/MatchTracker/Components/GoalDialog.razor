@@ -1,0 +1,108 @@
+@implements IDialogContentComponent<GoalDialogData>
+
+<EditForm Model="@Input" OnValidSubmit="ConfirmAsync" FormName="player-form" style="width: 100%">
+    <FluentValidator />
+        
+    @* Header *@
+    <FluentDialogHeader ShowDismiss="true">
+        <FluentStack VerticalAlignment="VerticalAlignment.Center">
+            <FluentLabel Typo="Typography.PaneHeader">
+                @Dialog.Instance.Parameters.Title
+            </FluentLabel>
+        </FluentStack>
+    </FluentDialogHeader>
+
+    @* Body *@
+    <FluentDialogBody>
+        <FluentStack Orientation="Orientation.Vertical">
+            <div class="full-width" style="margin-bottom: 1rem;">
+                <FluentCheckbox Name="Input.IsOwnGoal" @bind-Value="Input.IsOwnGoal" Placeholder="Is Own Goal" Label="Own Goal?" Style="width: 100%" />
+                <FluentValidationMessage For="() => Input.IsOwnGoal" class="text-danger" />
+            </div>
+            <div class="full-width">
+                <FluentSelect Id="GoalScorerSelect"
+                              Name="Input.GoalScorer"
+                              TOption=PlayerOptionDto
+                              Label="Goal Scorer"
+                              Items="Content.ScorerOptions"
+                              Width="100%"
+                              Placeholder="Select a player..."
+                              OptionText="(p => p.Name)"
+                              @bind-SelectedOption="Input.GoalScorer"
+                              Disabled="!ScorerRequired"
+                              Required="ScorerRequired"/>
+                <FluentValidationMessage For="() => Input.GoalScorer" class="text-danger" />
+            </div>
+            <div class="full-width">
+                <FluentSelect Id="AssisterSelect"
+                              Name="Input.Assister"
+                              TOption=PlayerOptionDto
+                              Label="Assister"
+                              Items="Content.AssisterOptions"
+                              Width="100%"
+                              Placeholder="Select a player..."
+                              OptionText="(p => p.Name)"
+                              @bind-SelectedOption="Input.Assister"
+                              Disabled="!AssisterRequired"
+                              Required="AssisterRequired"/>
+                <FluentValidationMessage For="() => Input.Assister" class="text-danger" />
+            </div>
+        </FluentStack>
+    </FluentDialogBody>
+
+    @* Footer *@
+    <FluentDialogFooter>
+        <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="width: 100%">
+            Confirm
+        </FluentButton>
+        <FluentButton Type="ButtonType.Button" Appearance="Appearance.Stealth" Style="width: 100%" OnClick="CancelAsync">
+            Cancel
+        </FluentButton>
+    </FluentDialogFooter>
+
+</EditForm>
+
+@code {
+    [Parameter]
+    public GoalDialogData Content { get; set; } = default!;
+
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
+
+    [SupplyParameterFromForm]
+    private GoalFormModel Input { get; set; } = default!;
+
+    private bool ScorerRequired => 
+        (Input.GoalType == GoalType.TeamGoal && !Input.IsOwnGoal) ||
+        (Input.GoalType == GoalType.OppositionGoal && Input.IsOwnGoal);
+
+    private bool AssisterRequired => Input.GoalType == GoalType.TeamGoal && !Input.IsOwnGoal;
+    
+    protected override void OnInitialized()
+    {
+        Input ??= new();
+    }
+
+    protected override void OnParametersSet()
+    {
+        Input.GoalType = Content.GoalType;
+    }
+
+    private async Task ConfirmAsync()
+    {
+        var result = Content with 
+        {
+            GoalType = Input.GoalType,
+            IsOwnGoal = Input.IsOwnGoal,
+            ScorerPlayerId = Input.GoalScorer?.Value,
+            AssistPlayerId = Input.Assister?.Value 
+        };
+
+        await Dialog.CloseAsync(result);
+    }
+
+    private async Task CancelAsync()
+    {
+        await Dialog.CancelAsync();
+    }
+}

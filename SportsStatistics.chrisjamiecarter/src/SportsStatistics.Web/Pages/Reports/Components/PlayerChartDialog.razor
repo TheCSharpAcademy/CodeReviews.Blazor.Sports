@@ -1,0 +1,163 @@
+﻿@implements IDialogContentComponent<PlayerSeasonStatisticsDto>
+
+@* Header *@
+<FluentDialogHeader ShowDismiss="true">
+    <FluentStack VerticalAlignment="VerticalAlignment.Center">
+        <FluentLabel Typo="Typography.PaneHeader">
+            @Dialog.Instance.Parameters.Title
+        </FluentLabel>
+    </FluentStack>
+</FluentDialogHeader>
+
+@* Body *@
+<FluentDialogBody>
+
+    <FluentStack Orientation="Orientation.Vertical">
+
+        <FluentStack Orientation="Orientation.Horizontal"
+                     HorizontalAlignment="HorizontalAlignment.SpaceBetween"
+                     VerticalAlignment="VerticalAlignment.Center">
+
+            <FluentStack Orientation="Orientation.Horizontal"
+                         HorizontalAlignment="HorizontalAlignment.Start"
+                         VerticalAlignment="VerticalAlignment.Center">
+                <FluentLabel Typo="Typography.Subject" 
+                             Weight="FontWeight.Bold">
+                    Shooting
+                </FluentLabel>
+            </FluentStack>
+            <FluentStack Orientation="Orientation.Horizontal"
+                     HorizontalAlignment="HorizontalAlignment.Center"
+                     VerticalAlignment="VerticalAlignment.Center">
+                <FluentLabel Typo="Typography.Subject"
+                             Weight="FontWeight.Bold">
+                    Team Comparison
+                </FluentLabel>
+            </FluentStack>
+
+        </FluentStack>
+
+        <StatisticProgress Label="Goals"
+                           Value="@Content.GoalCount.Value"
+                           Percentage="@Content.GoalCount.Percentage"
+                           IsPositive="true" />
+
+        <StatisticProgress Label="Shots"
+                           Value="@Content.ShotCount.Value"
+                           Percentage="@Content.ShotCount.Percentage"
+                           IsPositive="true" />
+
+        <StatisticProgress Label="Shots on target"
+                           Value="@Content.ShotOnTargetCount.Value"
+                           Percentage="@Content.ShotOnTargetCount.Percentage"
+                           IsPositive="true" />
+
+        <StatisticProgress Label="Shots off target"
+                           Value="@Content.ShotOffTargetCount.Value"
+                           Percentage="@Content.ShotOffTargetCount.Percentage"
+                           IsPositive="false" />
+
+        <FluentSpacer />
+
+        <FluentLabel Typo="Typography.Subject"
+                     Weight="FontWeight.Bold">
+            Passing
+        </FluentLabel>
+                
+        <StatisticProgress Label="Assists"
+                           Value="@Content.GoalAssistCount.Value"
+                           Percentage="@Content.GoalAssistCount.Percentage"
+                           IsPositive="true" />
+
+        <StatisticProgress Label="Passes"
+                           Value="@Content.PassCount.Value"
+                           Percentage="@Content.PassCount.Percentage"
+                           IsPositive="true" />
+
+        <StatisticProgress Label="Successful Passes"
+                           Value="@Content.PassSuccessCount.Value"
+                           Percentage="@Content.PassSuccessCount.Percentage"
+                           IsPositive="true" />
+
+        <StatisticProgress Label="Failed Passes"
+                           Value="@Content.PassFailureCount.Value"
+                           Percentage="@Content.PassFailureCount.Percentage"
+                           IsPositive="false" />
+                           
+        <FluentSpacer />
+
+        <FluentLabel Typo="Typography.Subject"
+                     Weight="FontWeight.Bold">
+            Possession
+        </FluentLabel>
+                
+        <StatisticProgress Label="Fouls Won"
+                           Value="@Content.FoulWonCount.Value"
+                           Percentage="@Content.FoulWonCount.Percentage"
+                           IsPositive="true" />
+                                                      
+        <FluentSpacer />
+
+        <FluentLabel Typo="Typography.Subject"
+                     Weight="FontWeight.Bold">
+            Defending
+        </FluentLabel>
+                
+        <StatisticProgress Label="Tackles"
+                           Value="@Content.TackleCount.Value"
+                           Percentage="@Content.TackleCount.Percentage"
+                           IsPositive="true" />
+                           
+        <StatisticProgress Label="Saves"
+                           Value="@Content.SaveCount.Value"
+                           Percentage="@Content.SaveCount.Percentage"
+                           IsPositive="true" />
+                           
+        <StatisticProgress Label="Fouls Conceded"
+                           Value="@Content.FoulConcededCount.Value"
+                           Percentage="@Content.FoulConcededCount.Percentage"
+                           IsPositive="false" />
+                                               
+        <StatisticProgress Label="Own Goals"
+                           Value="@Content.OwnGoalCount.Value"
+                           Percentage="@Content.OwnGoalCount.Percentage"
+                           IsPositive="false" />
+
+        <FluentSpacer />
+
+        <FluentLabel Typo="Typography.Subject"
+                     Weight="FontWeight.Bold">
+            Discipline
+        </FluentLabel>
+                
+        <StatisticProgress Label="Yellow Cards"
+                           Value="@Content.YellowCardCount.Value"
+                           Percentage="@Content.YellowCardCount.Percentage"
+                           IsPositive="false" />
+                           
+        <StatisticProgress Label="Red Cards"
+                           Value="@Content.RedCardCount.Value"
+                           Percentage="@Content.RedCardCount.Percentage"
+                           IsPositive="false" />
+    </FluentStack>
+
+</FluentDialogBody>
+
+
+@* Footer *@
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Accent" OnClick="@Closesync">Close</FluentButton>
+</FluentDialogFooter>
+
+@code {
+    [Parameter]
+    public PlayerSeasonStatisticsDto Content { get; set; } = default!;
+
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
+
+    private async Task Closesync()
+    {
+        await Dialog.CloseAsync();
+    }
+}

@@ -1,0 +1,22 @@
+﻿@if (HasMessage)
+{
+    <FluentMessageBar Intent="@(StatusMessageIntent)" AllowDismiss="@false">
+        @StatusModel.Message
+    </FluentMessageBar>
+}
+
+@code {
+    [Parameter]
+    public StatusModel StatusModel { get; set; } = new();
+
+    private bool HasMessage => !string.IsNullOrWhiteSpace(StatusModel.Message);
+
+    private MessageIntent StatusMessageIntent => StatusModel.Level switch
+    {
+        StatusLevel.Error => MessageIntent.Error,
+        StatusLevel.Info => MessageIntent.Info,
+        StatusLevel.Success => MessageIntent.Success,
+        StatusLevel.Warning => MessageIntent.Warning,
+        _ => MessageIntent.Info,
+    };
+}

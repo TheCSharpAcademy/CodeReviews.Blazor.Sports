@@ -1,0 +1,24 @@
+﻿@page "/signout"
+@using SportsStatistics.Application.Abstractions.Messaging
+@using SportsStatistics.Web.Abstractions.Messaging
+@using SportsStatistics.Web.Contracts.Responses
+
+@code {
+    private IJSObjectReference? _authJS;
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _authJS = await JS.InvokeAsync<IJSObjectReference>("import", "/js/auth.js");
+
+        if (_authJS is not null)
+        {
+            var response = await _authJS.InvokeAsync<SignoutResponse>("postSignout");
+
+            Navigation.NavigateTo(ReturnUrl ?? Routes.Home, true);
+        }
+    }
+}
+

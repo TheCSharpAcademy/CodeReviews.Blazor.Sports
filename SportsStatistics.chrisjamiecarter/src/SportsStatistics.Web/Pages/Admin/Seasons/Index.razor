@@ -1,0 +1,146 @@
+﻿@page "/admin/seasons"
+
+<PageTitle>Seasons</PageTitle>
+
+<FluentCard Style="overflow-y: auto;" MinimalStyle>
+
+    <FluentBreadcrumb Style="margin-bottom: 1rem;">
+        <FluentBreadcrumbItem Appearance="Appearance.Hypertext">
+            Admin
+        </FluentBreadcrumbItem>
+        <FluentBreadcrumbItem Appearance="Appearance.Hypertext" Href="@Routes.Admin.Fixtures">
+            Fixtures
+        </FluentBreadcrumbItem>
+        <FluentBreadcrumbItem Appearance="Appearance.Accent">
+            Seasons
+        </FluentBreadcrumbItem>
+    </FluentBreadcrumb>
+
+    @switch (true)
+    {
+        case true when IsSeasonFormVisible:
+            <SeasonForm OnCancel="HideSeasonForm"
+                        OnSubmit="OnSubmitAsync"
+                        SelectedSeason="@SelectedSeason" />
+            break;
+        default:
+            <SeasonList Seasons="@Seasons"
+                        OnAddSeason="@(() => ShowSeasonForm())"
+                        OnDeleteSeason="OnDeleteSeasonAsync"
+                        OnEditSeason="ShowSeasonForm"
+                        IsLoading="@IsLoading" />
+            break;
+    }
+</FluentCard>
+
+@code {
+    private bool IsLoading { get; set; } = true;
+
+    private ComponentVisibilityMode FormMode { get; set; } = ComponentVisibilityMode.Hide;
+
+    private IQueryable<SeasonDto>? Seasons { get; set; }
+
+    private SeasonDto? SelectedSeason { get; set; }
+
+    private bool IsSeasonFormVisible => FormMode == ComponentVisibilityMode.Show;
+
+    protected override async Task OnInitializedAsync()
+    {
+        IsLoading = true;
+
+        await LoadSeasonsAsync();
+
+        IsLoading = false;
+    }
+
+    private void HideSeasonForm()
+    {
+        SelectedSeason = null;
+        FormMode = ComponentVisibilityMode.Hide;
+    }
+
+    private void ShowSeasonForm(SeasonDto? season = null)
+    {
+        SelectedSeason = season;
+        FormMode = ComponentVisibilityMode.Show;
+    }
+
+    private async Task LoadSeasonsAsync()
+    {
+        var request = new GetSeasonsQuery();
+        var result = await Messenger.SendAsync(request);
+        if (result.IsFailure)
+        {
+            ToastService.ShowError("Unable to load seasons");
+        }
+
+        Seasons = result.Value.ToQueryable();
+    }
+
+    private async Task<bool> GetUserConfirmationAsync(string message, string primaryText, string secondaryText)
+    {
+        var dialog = await DialogService.ShowConfirmationAsync(message, primaryText, secondaryText);
+        var result = await dialog.Result;
+        return !result.Cancelled;
+    }
+
+    private async Task OnDeleteSeasonAsync(SeasonDto season)
+    {
+        if (await GetUserConfirmationAsync($"Are you sure you want to delete <strong>{season.Name}</strong>?", "Delete", "Cancel"))
+        {
+            await DeleteSeasonAsync(season.ToDeleteCommand());
+        }
+    }
+
+    private async Task OnSubmitAsync(SeasonFormModel season)
+    {
+        if (SelectedSeason is null)
+        {
+            await CreateSeasonAsync(season.ToCreateCommand());
+        }
+        else
+        {
+            await UpdateSeasonAsync(season.ToUpdateCommand(SelectedSeason.Id));
+        }
+    }
+
+    private async Task CreateSeasonAsync(CreateSeasonCommand command)
+    {
+        var result = await Messenger.SendAsync(command);
+        await HandleResultAsync(result, "Season created successfully.");
+    }
+
+    private async Task DeleteSeasonAsync(DeleteSeasonCommand command)
+    {
+        var result = await Messenger.SendAsync(command);
+        await HandleResultAsync(result, "Season deleted successfully.");
+    }
+
+    private async Task UpdateSeasonAsync(UpdateSeasonCommand command)
+    {
+        var result = await Messenger.SendAsync(command);
+        await HandleResultAsync(result, "Season updated successfully.");
+    }
+
+    private async Task HandleResultAsync(Result result, string successMessage)
+    {
+        if (result.IsSuccess)
+        {
+            ToastService.ShowSuccess(successMessage);
+            await LoadSeasonsAsync();
+            HideSeasonForm();
+        }
+        else
+        {
+            if (result.Error is ValidationError validationError)
+            {
+                var errorDescription = string.Join(Environment.NewLine, validationError.Errors.Select(e => e.Description));
+                ToastService.ShowError(errorDescription);
+            }
+            else
+            {
+                ToastService.ShowError(result.Error.Description);
+            }
+        }
+    }
+}

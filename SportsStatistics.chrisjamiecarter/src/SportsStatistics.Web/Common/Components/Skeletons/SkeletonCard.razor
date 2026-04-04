@@ -1,0 +1,32 @@
+﻿<FluentCard>
+    <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Stretch">
+        
+        <!-- Header -->
+        <FluentStack VerticalAlignment="VerticalAlignment.Center">
+            <FluentSkeleton Shape="SkeletonShape.Circle" Width="24px" Height="24px" Shimmer="true" />
+            <FluentSkeleton Width="@TitleWidth" Height="24px" Shimmer="true" />
+        </FluentStack>
+        
+        <FluentDivider />
+        
+        <!-- Content Lines -->
+        @for (int i = 0; i < SubtitleCount; i++)
+        {
+            <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center">
+                <FluentSkeleton Width="80%" Height="16px" Shimmer="true" />
+            </FluentStack>
+        }
+        
+    </FluentStack>
+</FluentCard>
+
+@code {
+    [Parameter]
+    public string TitleWidth { get; set; } = "120px";
+
+    [Parameter]
+    public bool ShowSubtitle { get; set; } = true;
+ 
+    [Parameter]
+    public int SubtitleCount { get; set; } = 3;
+}

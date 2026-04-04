@@ -1,0 +1,60 @@
+﻿@if (IsLoading)
+{
+    <SkeletonCard />
+    return;
+}
+
+<FluentCard>
+    <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Stretch">
+
+     <FluentStack VerticalAlignment="VerticalAlignment.Center">
+            <FluentIcon Value="@(new Icons.Regular.Size20.DataTrending())" Color="Color.Accent" />
+            <FluentLabel Weight="FontWeight.Bold" Typo="Typography.H3">Recent Form</FluentLabel>
+        </FluentStack>
+
+        <FluentDivider />
+
+        @if (Results is null || Results.Count == 0)
+        {
+            <FluentSpacer />
+            <FluentStack Orientation="Orientation.Vertical"
+                         VerticalAlignment="VerticalAlignment.Center"
+                         HorizontalAlignment="HorizontalAlignment.Center">
+                <FluentSpacer />
+                <FluentIcon Value="@(new Icons.Regular.Size24.History())" Color="Color.Accent" />
+                <FluentSpacer />
+                <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold">No recent form</FluentLabel>
+                <FluentSpacer />
+            </FluentStack>
+            <FluentSpacer />
+        }
+        else
+        {
+            <FluentSpacer />
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.SpaceBetween" Style="width: 100%;">
+                @foreach (var result in Results)
+                {
+                    <FluentSpacer />
+                    <FluentBadge Appearance="Appearance.Neutral" Fill="@GetScoreBadgeFill(result.Result)" title="@result.Opponent">
+                        <FluentLabel Weight="FontWeight.Bold" Typo="Typography.H4" Color="Color.Custom" CustomColor="white" Style="margin: 0.25rem 0.5rem;">
+                            @result.HomeGoals - @result.AwayGoals
+                        </FluentLabel>
+                    </FluentBadge>
+                    <FluentSpacer />
+                }
+            </FluentStack>
+            <FluentSpacer />
+        }
+    </FluentStack>
+</FluentCard>
+
+@code {
+    [Parameter]
+    public bool IsLoading { get; set; } = true;
+
+    [Parameter]
+    public List<RecentFormItemDto>? Results { get; set; }
+
+    private string GetScoreBadgeFill(string result) => result.ToLower();
+
+}

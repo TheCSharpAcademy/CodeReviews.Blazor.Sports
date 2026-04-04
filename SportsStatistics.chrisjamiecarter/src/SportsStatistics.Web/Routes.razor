@@ -1,0 +1,41 @@
+﻿<Router AppAssembly="typeof(Program).Assembly">
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)">
+            <NotAuthorized Context="authContext">
+                @if (authContext.User.Identity?.IsAuthenticated is true)
+                {
+                    <RedirectToAccessDenied />
+                }
+                else
+                {
+                    <RedirectToSignin />
+                }
+            </NotAuthorized>
+        </AuthorizeRouteView>
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+</Router>
+
+@code{
+    public const string Home = "/";
+    public const string Error = "/error";
+    public const string MatchTracker = "/match-tracker";
+    public const string Reports = "/reports";
+
+    public static class Admin
+    {
+        private const string Index = "/admin";
+        public const string Club = $"{Index}/club";
+        public static string Competitions(Guid seasonId) => $"{Index}/competitions/{seasonId}";
+        public const string Fixtures = $"{Index}/fixtures";
+        public const string Players = $"{Index}/players";
+        public const string Seasons = $"{Index}/seasons";
+    }
+
+    public static class Identity
+    {
+        public const string AccessDenied = "/access-denied";
+        public const string Signin = "/signin";
+        public const string Signout = "/signout";
+    }
+}

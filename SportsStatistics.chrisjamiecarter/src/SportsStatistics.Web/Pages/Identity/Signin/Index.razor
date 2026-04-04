@@ -1,0 +1,151 @@
+﻿@page "/signin"
+@using SportsStatistics.Application.Abstractions.Messaging
+@using SportsStatistics.Web.Abstractions.Messaging
+@using SportsStatistics.Web.Contracts.Responses
+@inject IHostEnvironment Environment
+
+<PageTitle>Sign In</PageTitle>
+
+<div class="container-centered">
+
+    <FluentCard Width="400px">
+        <FluentStack Orientation="Orientation.Vertical">
+
+            <FluentLabel Typo="Typography.H3" Alignment="HorizontalAlignment.Center">
+                Sign In
+            </FluentLabel>
+
+            <FluentSpacer />
+
+            <StatusMessageBar StatusModel="SignInStatus" />
+            <EditForm Model="Input" method="post" OnValidSubmit="SignInUserAsync" FormName="signin" style="width: 100%">
+                <DataAnnotationsValidator />
+                
+                <FluentStack Orientation="Orientation.Vertical">
+                    <div class="full-width">
+                        <FluentTextField Name="Input.Email" @bind-Value="Input.Email" AutoComplete="username" Required="true" Placeholder="name@example.com" Label="Email" Style="width: 100%" />
+                        <FluentValidationMessage For="() => Input.Email" class="text-danger" />
+                    </div>
+                    <div class="full-width">
+                        <FluentTextField type="password" Name="Input.Password" @bind-Value="Input.Password" AutoComplete="current-password" Required="true" Placeholder="password" Label="Password" Style="width: 100%" />
+                        <FluentValidationMessage For="() => Input.Password" class="text-danger" />
+                    </div>
+                    <div class="full-width">
+                        <FluentCheckbox Name="Input.RememberMe" @bind-Value="Input.IsPersistant" Label="Remember me" />
+                    </div>
+                    <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="width: 100%">Log in</FluentButton>
+                </FluentStack>
+            </EditForm>
+            
+            @if (Environment.IsDevelopment())
+            {
+                <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center">
+                    <FluentDivider Style="width: 100%; margin: 0.5rem 0;" />
+
+                    <FluentLabel>
+                        Test the application with a demo user!
+                    </FluentLabel>
+
+                    <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center">
+                        <FluentButton Appearance="Appearance.Accent" OnClick="DemoAdministratorSignInAsync">
+                            Administrator
+                        </FluentButton>
+                        <FluentButton Appearance="Appearance.Accent" OnClick="DemoMatchTrackerSignInAsync">
+                            Match Tracker
+                        </FluentButton>
+                        <FluentButton Appearance="Appearance.Accent" OnClick="DemoReportViewerSignInAsync">
+                            Report Viewer
+                        </FluentButton>
+                    </FluentStack>
+                </FluentStack>
+            }
+
+        </FluentStack>
+    </FluentCard>
+
+</div>
+
+@code {
+    private IJSObjectReference? _authJS;
+
+    [SupplyParameterFromForm]
+    private SigninInputModel Input { get; set; } = default!;
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    private StatusModel SignInStatus { get; set; } = new();
+
+    protected override void OnInitialized()
+    {
+        Input ??= new();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _authJS = await JS.InvokeAsync<IJSObjectReference>("import", "/js/auth.js");
+        }
+    }
+
+    private async Task SignInUserAsync()
+    {
+        if (_authJS is not null)
+        {
+            var response = await _authJS.InvokeAsync<SigninResponse>("postSignin", new
+            {
+                email = Input.Email,
+                password = Input.Password,
+                isPersistant = Input.IsPersistant,
+            });
+
+            if (response.IsSuccess)
+            {
+                Navigation.NavigateTo(ReturnUrl ?? Routes.Home, true);
+            }
+            else
+            {
+                SignInStatus = new StatusModel(response.Message, StatusLevel.Error);
+            }
+        }
+    }
+
+    private async Task DemoAdministratorSignInAsync()
+    {
+        // NOTE: Hard-coded and may not exist if seeding setup changed.
+        await SignInDemoUserAsync("admin@sportsstatistics.com");
+    }
+    
+    private async Task DemoMatchTrackerSignInAsync()
+    {
+        // NOTE: Hard-coded and may not exist if seeding setup changed.
+        await SignInDemoUserAsync("tracker@sportsstatistics.com");
+    }
+    
+    private async Task DemoReportViewerSignInAsync()
+    {
+        // NOTE: Hard-coded and may not exist if seeding setup changed.
+        await SignInDemoUserAsync("reports@sportsstatistics.com");
+    }
+    
+    private async Task SignInDemoUserAsync(string email)
+    {
+        if (_authJS is not null)
+        {
+            var response = await _authJS.InvokeAsync<SigninResponse>("postDemoSignin", new
+            {
+                email = email,
+            });
+
+            if (response.IsSuccess)
+            {
+                Navigation.NavigateTo(ReturnUrl ?? Routes.Home, true);
+            }
+            else
+            {
+                SignInStatus = new StatusModel(response.Message, StatusLevel.Error);
+            }
+        }
+    }
+}

@@ -1,0 +1,21 @@
+﻿@using SportsStatistics.Application.Fixtures.GetByDate
+@using SportsStatistics.Application.Fixtures.Update
+@using SportsStatistics.Application.Fixtures.UpdateScore
+@using SportsStatistics.Application.Fixtures.UpdateStatus
+@using SportsStatistics.Application.MatchTracking.GetByFixtureId
+@using SportsStatistics.Application.MatchTracking.MatchEvents.Create
+@using SportsStatistics.Application.MatchTracking.PlayerEvents.Create
+@using SportsStatistics.Application.MatchTracking.SubstitutionEvents.Create
+@using SportsStatistics.Application.MatchTracking.SubstitutionEvents.GetByFixtureId
+@using SportsStatistics.Application.Players.GetAll
+@using SportsStatistics.Application.Teamsheets.Create
+@using SportsStatistics.Application.Teamsheets.GetByFixtureId
+@using SportsStatistics.Domain.Fixtures
+@using SportsStatistics.Domain.MatchTracking
+@using SportsStatistics.Domain.MatchTracking.MatchEvents
+@using SportsStatistics.Domain.MatchTracking.PlayerEvents
+@using SportsStatistics.Web.Pages.MatchTracker
+@using SportsStatistics.Web.Pages.MatchTracker.Components
+@using SportsStatistics.Web.Pages.MatchTracker.Models
+
+@attribute [Authorize(Policy = Policies.MatchTracker)]

@@ -1,0 +1,129 @@
+﻿<FluentGrid>
+    <FluentGridItem xs="12" sm="12" md="12" lg="12" xl="12">
+        <FluentCard AreaRestricted="false">
+            <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Stretch">
+
+                <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                    <FluentIcon Value="@(new Icons.Regular.Size24.CalendarSettings())" Color="Color.Accent" />
+                    <FluentLabel Weight="FontWeight.Bold" Typo="Typography.Header">Fixtures</FluentLabel>
+                </FluentStack>
+
+                <FluentDivider />
+
+                <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.SpaceBetween">
+                    <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                        <FluentSelect TOption="SeasonDto"
+                                      Label="Season"
+                                      Items="@Seasons"
+                                      OptionText="@(s => s.Name)"
+                                      SelectedOption="SelectedSeason"
+                                      SelectedOptionChanged="SelectedSeasonChanged"
+                                      Disabled="@IsLoading" />
+
+                        <FluentButton IconEnd="@(new Icons.Regular.Size20.Settings())"
+                                      Title="Season Settings"
+                                      Appearance="Appearance.Neutral"
+                                      OnClick="@(() => Navigation.NavigateTo(Routes.Admin.Seasons))"
+                                      Disabled="@IsLoading" />
+                    </FluentStack>
+
+                    <FluentButton IconEnd="@(new Icons.Regular.Size20.CalendarAdd())"
+                                  Appearance="Appearance.Accent"
+                                  Title="Add Fixture"
+                                  OnClick="OnAddClick"
+                                  Disabled="@IsLoading" />
+                </FluentStack>
+
+                <FluentSpacer />
+
+                @if (IsLoading)
+                {
+                    <SkeletonDataGrid ColumnCount="6" />
+                }
+                else
+                {
+                    <FluentDataGrid Items="@Fixtures" Pagination="@Pagination" RowSize="DataGridRowSize.Medium">
+                        <PropertyColumn Property="@(p => p.Date)" Sortable="true" IsDefaultSortColumn="true" />
+                        <PropertyColumn Property="@(p => p.CompetitionName)" Title="Competition" />
+                        <PropertyColumn Property="@(p => p.Opponent)" />
+                        <PropertyColumn Property="@(p => p.Location)" />
+                        <PropertyColumn Property="@(p => p.DisplayStatus)" Title="Status" />
+
+                        <TemplateColumn Align="Align.End">
+                            <FluentButton IconEnd="@(new Icons.Regular.Size20.Edit())" Appearance="Appearance.Accent" OnClick="@(() => OnEditClick(context))" Title="@(EditButtonText(context))" Disabled="@(!CanEditFixture(context))" />
+                            <FluentButton IconEnd="@(new Icons.Regular.Size20.Delete())" Appearance="Appearance.Accent" OnClick="@(() => OnDeleteClick(context))" Title="@(DeleteButtonText(context))" Disabled="@(!CanDeleteFixture(context))" />
+                        </TemplateColumn>
+                    </FluentDataGrid>
+
+                    <FluentPaginator State="@Pagination" />
+                }
+              
+            </FluentStack>
+        </FluentCard>
+    </FluentGridItem>
+</FluentGrid>
+
+@code {
+    private PaginationState Pagination = new PaginationState() { ItemsPerPage = 10 };
+    
+    [Parameter]
+    public bool IsLoading { get; set; } = true;
+
+    [Parameter]
+    public EventCallback<FixtureDto?> OnShowFixtureForm { get; set; }
+
+    [Parameter]
+    public EventCallback<FixtureDto> OnDeleteFixture { get; set; }
+
+    [Parameter]
+    public IQueryable<FixtureDto>? Fixtures { get; set; }
+
+    [Parameter]
+    public IEnumerable<SeasonDto>? Seasons { get; set; }
+
+    [Parameter]
+    public SeasonDto? SelectedSeason { get; set; }
+    
+    [Parameter]
+    public EventCallback<SeasonDto> SelectedSeasonChanged { get; set; }
+
+    private async Task OnAddClick()
+    {
+        await OnShowFixtureForm.InvokeAsync(null);
+    }
+
+    private async Task OnDeleteClick(FixtureDto fixture)
+    {
+        await OnDeleteFixture.InvokeAsync(fixture);
+    }
+
+    private async Task OnEditClick(FixtureDto fixture)
+    {
+        await OnShowFixtureForm.InvokeAsync(fixture);
+    }
+
+    private bool CanDeleteFixture(FixtureDto fixture)
+    {
+        return fixture.StatusId == Status.Scheduled.Value;
+    }
+
+    private string DeleteButtonText(FixtureDto fixture)
+    {
+        return CanDeleteFixture(fixture) ? "Delete" : "Can only delete a scheduled fixture";
+    }
+
+    private bool CanEditFixture(FixtureDto fixture)
+    {
+        return fixture.StatusId == Status.Scheduled.Value;
+    }
+
+    private string EditButtonText(FixtureDto fixture)
+    {
+        return CanEditFixture(fixture) ? "Edit" : "Can only edit a scheduled fixture";
+    }
+
+    private async Task OnSelectedSeasonChanged(SeasonDto season)
+    {
+        await SelectedSeasonChanged.InvokeAsync(season);
+    }
+}

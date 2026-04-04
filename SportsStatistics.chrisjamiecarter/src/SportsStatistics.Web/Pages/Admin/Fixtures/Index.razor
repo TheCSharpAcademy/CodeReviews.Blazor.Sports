@@ -1,0 +1,209 @@
+﻿@page "/admin/fixtures"
+
+<PageTitle>Fixtures</PageTitle>
+
+<FluentCard Style="overflow-y: auto;" MinimalStyle>
+
+    <FluentBreadcrumb Style="margin-bottom: 1rem;">
+        <FluentBreadcrumbItem Appearance="Appearance.Hypertext">
+            Admin
+        </FluentBreadcrumbItem>
+        <FluentBreadcrumbItem Appearance="Appearance.Accent">
+            Fixtures
+        </FluentBreadcrumbItem>
+    </FluentBreadcrumb>
+
+    @switch (true)
+    {
+        case true when IsFixtureFormVisible:
+            <FixtureForm CompetitionOptions="@Competitions"
+                         OnCancel="@OnHideFixtureForm"
+                         OnSubmit="@OnSubmitAsync"
+                         SelectedFixture="@SelectedFixture"
+                         SelectedSeason="@SelectedSeason" />
+            break;
+        default:
+            <FixtureList Fixtures="@Fixtures"
+                         OnShowFixtureForm="@OnShowFixtureForm"
+                         OnDeleteFixture="@OnDeleteFixture"
+                         Seasons="@Seasons"
+                         SelectedSeason="@SelectedSeason"
+                         SelectedSeasonChanged="@OnSelectedSeasonChangedAsync"
+                         IsLoading="@IsLoading" />
+            break;
+    }
+
+</FluentCard>
+
+@code {
+    private bool IsLoading { get; set; } = true;
+
+    private ComponentVisibilityMode FixtureFormMode { get; set; } = ComponentVisibilityMode.Hide;
+
+    private IEnumerable<CompetitionDto>? Competitions { get; set; }
+
+    private IQueryable<FixtureDto>? Fixtures { get; set; }
+
+    private IEnumerable<SeasonDto>? Seasons { get; set; }
+
+    private FixtureDto? SelectedFixture { get; set; }
+
+    private SeasonDto? SelectedSeason { get; set; }
+
+    private bool IsFixtureFormVisible => FixtureFormMode == ComponentVisibilityMode.Show;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await InitialisePage();
+    }
+
+    private async Task InitialisePage()
+    {
+        IsLoading = true;
+
+        await LoadSeasonsAsync();
+        HideFixtureForm();
+
+        IsLoading = false;
+    }
+
+    private async Task CreateFixtureAsync(CreateFixtureCommand command)
+    {
+        var result = await Messenger.SendAsync(command);
+        await HandleResultAsync(result, "Fixture created successfully.");
+    }
+
+    private async Task DeleteFixtureAsync(DeleteFixtureCommand command)
+    {
+        var result = await Messenger.SendAsync(command);
+        await HandleResultAsync(result, "Fixture deleted successfully.");
+    }
+
+    private async Task UpdateFixtureAsync(UpdateFixtureCommand command)
+    {
+        var result = await Messenger.SendAsync(command);
+        await HandleResultAsync(result, "Fixture updated successfully.");
+    }
+
+    private async Task HandleResultAsync(Result result, string successMessage)
+    {
+        if (result.IsSuccess)
+        {
+            ToastService.ShowSuccess(successMessage);
+            await InitialisePage();
+        }
+        else
+        {
+            if (result.Error is ValidationError validationError)
+            {
+                var errorDescription = string.Join(Environment.NewLine, validationError.Errors.Select(e => e.Description));
+                ToastService.ShowError(errorDescription);
+            }
+            else
+            {
+                ToastService.ShowError(result.Error.Description);
+            }
+        }
+    }
+
+    private void HideFixtureForm()
+    {
+        SelectedFixture = null;
+        FixtureFormMode = ComponentVisibilityMode.Hide;
+    }
+
+    private void ShowFixtureForm(FixtureDto? fixture)
+    {
+        SelectedFixture = fixture;
+        FixtureFormMode = ComponentVisibilityMode.Show;
+    }
+
+    private async Task LoadCompetitionsAsync(SeasonDto season)
+    {
+        var request = new GetAllCompetitionsQuery(season.Id);
+        var result = await Messenger.SendAsync(request);
+        if (result.IsFailure)
+        {
+            ToastService.ShowError("Unable to load competitions");
+        }
+
+        Competitions = result.Value.Select(x => new CompetitionDto(x.Id, x.SeasonId, x.Name, x.Format));
+    }
+
+    private async Task LoadFixturesAsync(SeasonDto season)
+    {
+        var request = new GetFixturesBySeasonIdQuery(season.Id);
+        var result = await Messenger.SendAsync(request);
+        if (result.IsFailure)
+        {
+            ToastService.ShowError("Unable to load fixtures");
+        }
+
+        Fixtures = result.Value.ToQueryable();
+    }
+
+    private async Task LoadSeasonsAsync()
+    {
+        var request = new GetSeasonsQuery();
+        var result = await Messenger.SendAsync(request);
+        if (result.IsFailure)
+        {
+            ToastService.ShowError("Unable to load seasons");
+        }
+
+        Seasons = result.Value
+            .OrderBy(season => season.StartDate)
+            .Select(x => new SeasonDto(x.Id, x.StartDate, x.EndDate, x.Name));
+                
+        var now = DateOnly.FromDateTime(DateTime.Now);
+        var loadSeason = SelectedSeason ?? Seasons.FirstOrDefault(x => x.StartDate <= now && now <= x.EndDate);
+        if (loadSeason is not null)
+        {
+            await OnSelectedSeasonChangedAsync(loadSeason);
+        }
+    }
+
+    private async Task<bool> GetUserConfirmationAsync(string message, string primaryText, string secondaryText)
+    {
+        var dialog = await DialogService.ShowConfirmationAsync(message, primaryText, secondaryText);
+        var result = await dialog.Result;
+        return !result.Cancelled;
+    }
+
+    private async Task OnDeleteFixture(FixtureDto fixture)
+    {
+        if (await GetUserConfirmationAsync($"Are you sure you want to delete <strong>{fixture.Id}</strong>?", "Delete", "Cancel"))
+        {
+            await DeleteFixtureAsync(fixture.ToDeleteCommand());
+        }
+    }
+
+    private void OnHideFixtureForm()
+    {
+        HideFixtureForm();
+    }
+
+    private void OnShowFixtureForm(FixtureDto? fixture)
+    {
+        ShowFixtureForm(fixture);
+    }
+
+    private async Task OnSubmitAsync(FixtureFormModel fixture)
+    {
+        if (SelectedFixture is null)
+        {
+            await CreateFixtureAsync(fixture.ToCreateCommand());
+        }
+        else
+        {
+            await UpdateFixtureAsync(fixture.ToUpdateCommand(SelectedFixture.Id));
+        }
+    }
+
+    private async Task OnSelectedSeasonChangedAsync(SeasonDto season)
+    {
+        SelectedSeason = season;
+        await LoadCompetitionsAsync(SelectedSeason);
+        await LoadFixturesAsync(SelectedSeason);
+    }
+}

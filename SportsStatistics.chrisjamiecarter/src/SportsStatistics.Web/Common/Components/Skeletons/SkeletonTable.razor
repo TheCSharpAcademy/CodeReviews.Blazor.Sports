@@ -1,0 +1,42 @@
+﻿<FluentCard Style="padding: 1rem;">
+    <div style="display: table; table-layout: fixed; width: 100%;">
+        <div style="overflow-x: auto;">
+            
+            @if (ShowHeader)
+            {
+                <FluentStack Orientation="Orientation.Horizontal"
+                             HorizontalAlignment="HorizontalAlignment.Stretch"
+                             Style="padding: 0.5rem 0; border-bottom: 2px solid var(--neutral-stroke-layer-2);">
+                    @for (int j = 0; j < ColumnCount; j++)
+                    {
+                        <FluentSkeleton Width="100%" Height="20px" Shimmer="true" />
+                    }
+                </FluentStack>
+            }
+            
+            @for (int i = 0; i < RowCount; i++)
+            {
+                <FluentStack Orientation="Orientation.Horizontal"
+                             HorizontalAlignment="HorizontalAlignment.Stretch"
+                             Style="padding: 0.5rem 0; border-bottom: 1px solid var(--neutral-stroke-layer-2);">
+                    @for (int j = 0; j < ColumnCount; j++)
+                    {
+                        <FluentSkeleton Width="100%" Height="20px" Shimmer="true" />
+                    }
+                </FluentStack>
+            }
+        </div>
+    </div>
+    <FluentPaginator State="@(new PaginationState { ItemsPerPage = 10 })" />
+</FluentCard>
+
+@code {
+    [Parameter]
+    public int RowCount { get; set; } = 5;
+
+    [Parameter]
+    public int ColumnCount { get; set; } = 4;
+ 
+    [Parameter]
+    public bool ShowHeader { get; set; } = true;
+}

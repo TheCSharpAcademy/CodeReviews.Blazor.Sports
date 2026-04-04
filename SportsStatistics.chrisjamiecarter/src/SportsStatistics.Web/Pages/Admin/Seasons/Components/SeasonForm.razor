@@ -1,0 +1,88 @@
+﻿<FluentGrid>
+    <FluentGridItem xs="12" sm="12" md="12" lg="6" xl="6">
+        <FluentCard AreaRestricted="false">
+            <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Stretch">
+                
+                <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                    <FluentIcon Value="@(new Icons.Regular.Size24.CalendarMultiple())" Color="Color.Accent" />
+                    <FluentLabel Weight="FontWeight.Bold" Typo="Typography.Header">@HeaderText</FluentLabel>
+                </FluentStack>
+
+                <FluentDivider />
+
+                <EditForm Model="@Input" OnValidSubmit="HandleValidSubmitAsync" FormName="season-form" style="width: 100%">
+                    <FluentValidator />
+
+                    <FluentStack Orientation="Orientation.Vertical">
+                        <div class="full-width">
+                            <FluentDatePicker Name="Input.StartDate" @bind-Value="Input.StartDate" Required="true" Label="Start Date" Style="width: 100%" />
+                            <FluentValidationMessage For="() => Input.StartDate" class="text-danger" />
+                        </div>
+                        <div class="full-width">
+                            <FluentDatePicker Name="Input.EndDate" @bind-Value="Input.EndDate" Required="true" Label="End Date" Style="width: 100%" />
+                            <FluentValidationMessage For="() => Input.EndDate" class="text-danger" />
+                        </div>
+                        <FluentStack Orientation="Orientation.Horizontal">
+                            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="width: 100%" Loading="IsSubmitting">
+                                @SubmitButtonText
+                            </FluentButton>
+                            <FluentButton Type="ButtonType.Button" Appearance="Appearance.Stealth" Style="width: 100%" OnClick="HandleCancelAsync">
+                                Cancel
+                            </FluentButton>
+                        </FluentStack>
+                    </FluentStack>
+                </EditForm>
+
+            </FluentStack>
+        </FluentCard>
+    </FluentGridItem>
+</FluentGrid>
+
+@code {
+    private bool IsSubmitting = false;
+
+    [Parameter]
+    public SeasonDto? SelectedSeason { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    [Parameter]
+    public EventCallback<SeasonFormModel> OnSubmit { get; set; }
+
+    [SupplyParameterFromForm]
+    private SeasonFormModel Input { get; set; } = default!;
+
+    private bool IsUpdateMode => SelectedSeason is not null;
+
+    private string HeaderText => $"{(IsUpdateMode ? "Edit" : "Add")} Season";
+
+    private string SubmitButtonText => IsUpdateMode ? "Update" : "Create";
+    
+    protected override void OnInitialized()
+    {
+        Input ??= new();
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (!IsSubmitting && SelectedSeason is not null)
+        {
+            Input = SelectedSeason.ToFormModel();
+        }
+    }
+
+    private async Task HandleCancelAsync()
+    {
+        await OnCancel.InvokeAsync();
+    }
+
+    private async Task HandleValidSubmitAsync()
+    {
+        IsSubmitting = true;
+
+        await OnSubmit.InvokeAsync(Input);
+
+        IsSubmitting = false;
+    }
+}

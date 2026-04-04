@@ -1,0 +1,97 @@
+﻿@if (IsLoading)
+{
+    <FluentGrid>
+        <FluentGridItem xs="12" sm="12" md="12" lg="6" xl="6">
+            <SkeletonCard />
+        </FluentGridItem>
+    </FluentGrid>
+    return;
+}
+
+<FluentGrid>
+    <FluentGridItem xs="12" sm="12" md="12" lg="6" xl="6">
+        <FluentCard AreaRestricted="false">
+            <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Stretch">
+                
+                <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                    <FluentIcon Value="@(new Icons.Regular.Size24.CalendarDate())" Color="Color.Accent" />
+                    <FluentLabel Weight="FontWeight.Bold" Typo="Typography.H3">Today's Fixture</FluentLabel>
+                </FluentStack>
+
+                <FluentDivider />
+
+                @if (TodaysFixture is not null)
+                {
+                    <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center">
+                        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                            <FluentIcon Value="@(new Icons.Regular.Size20.Trophy())" Color="Color.Accent" />
+                            <FluentStack Orientation="Orientation.Vertical" VerticalGap="2">
+                                <FluentLabel Typo="Typography.Body" Style="opacity: 0.7;">Competition</FluentLabel>
+                                <FluentLabel Typo="Typography.Body" Weight="FontWeight.Bold">@TodaysFixture.CompetitionName</FluentLabel>
+                            </FluentStack>
+                        </FluentStack>
+
+                        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                            <FluentIcon Value="@(new Icons.Regular.Size20.PeopleTeam())" Color="Color.Accent" />
+                            <FluentStack Orientation="Orientation.Vertical" VerticalGap="2">
+                                <FluentLabel Typo="Typography.Body" Style="opacity: 0.7;">Opponent</FluentLabel>
+                                <FluentLabel Typo="Typography.Body" Weight="FontWeight.Bold">@TodaysFixture.Opponent</FluentLabel>
+                            </FluentStack>
+                        </FluentStack>
+                        
+                        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                            <FluentIcon Value="@(new Icons.Regular.Size20.Timer())" Color="Color.Accent" />
+                            <FluentStack Orientation="Orientation.Vertical" VerticalGap="2">
+                                <FluentLabel Typo="Typography.Body" Style="opacity: 0.7;">Kick-off</FluentLabel>
+                                <FluentLabel Typo="Typography.Body" Weight="FontWeight.Bold">@TodaysFixture.DisplayKickoffTime</FluentLabel>
+                            </FluentStack>
+                        </FluentStack>
+                        
+                        <FluentButton Appearance="Appearance.Accent"
+                                        IconStart="@(new Icons.Regular.Size20.Play())"
+                                        OnClick="StartMatchTracking">
+                            Start Match
+                        </FluentButton>
+                    </FluentStack>
+                }
+                else
+                {
+                    <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center">
+                        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                            <FluentIcon Value="@(new Icons.Regular.Size20.CalendarCancel())" Color="Color.Accent" />
+                            <FluentStack Orientation="Orientation.Vertical" VerticalGap="2">
+                                <FluentLabel Typo="Typography.Body" Weight="FontWeight.Bold">No fixture scheduled today.</FluentLabel>
+                                <FluentLabel Typo="Typography.Body">Please visit the home page for the next fixture date.</FluentLabel>
+                            </FluentStack>
+                        </FluentStack>
+                        <FluentButton Appearance="Appearance.Accent"
+                                      IconStart="@(new Icons.Regular.Size20.Home())"
+                                      OnClick="@(() => Navigation.NavigateTo(Routes.Home))">
+                            Return to Home
+                        </FluentButton>
+                    </FluentStack>
+                }
+
+            </FluentStack>
+        </FluentCard>
+    </FluentGridItem>
+</FluentGrid>
+
+@code {
+    [Parameter]
+    public bool IsLoading { get; set; } = true;
+
+    [Parameter]
+    public FixtureDto? TodaysFixture { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OnFixtureSelected { get; set; }
+
+    private async Task StartMatchTracking()
+    {
+        if (TodaysFixture is not null)
+        {
+            await OnFixtureSelected.InvokeAsync(TodaysFixture.Id);
+        }
+    }
+}

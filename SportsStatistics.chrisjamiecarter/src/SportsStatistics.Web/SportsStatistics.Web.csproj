@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <UserSecretsId>aba9c509-5633-4232-8031-d91e1a0945fc</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Blazilla" />
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <PackageReference Include="MediatR" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" />
+    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Emoji" />
+    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Icons" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SportsStatistics.Application\SportsStatistics.Application.csproj" />
+    <ProjectReference Include="..\SportsStatistics.Authorization\SportsStatistics.Authorization.csproj" />
+    <ProjectReference Include="..\SportsStatistics.Domain\SportsStatistics.Domain.csproj" />
+    <ProjectReference Include="..\SportsStatistics.Infrastructure\SportsStatistics.Infrastructure.csproj" />
+    <ProjectReference Include="..\SportsStatistics.Aspire.ServiceDefaults\SportsStatistics.Aspire.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SportsStatistics.ArchitectureTests" />
+    <InternalsVisibleTo Include="SportsStatistics.Web.Tests" />
+  </ItemGroup>
+
+</Project>

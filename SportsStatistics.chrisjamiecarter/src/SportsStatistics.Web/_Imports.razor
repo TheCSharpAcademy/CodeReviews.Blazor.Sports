@@ -1,0 +1,33 @@
+﻿@using Blazilla
+@using FluentValidation
+@using Microsoft.AspNetCore.Antiforgery
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Components.Web.Virtualization
+@using Microsoft.FluentUI.AspNetCore.Components
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons
+@using Microsoft.FluentUI.AspNetCore.Components.Extensions
+@using SportsStatistics.Application.Abstractions.Messaging
+@using SportsStatistics.Authorization.Constants
+@using SportsStatistics.SharedKernel
+@using SportsStatistics.Web.Abstractions.Messaging
+@using SportsStatistics.Web.Common
+@using SportsStatistics.Web.Common.Components
+@using SportsStatistics.Web.Common.Components.Skeletons
+@using SportsStatistics.Web.Common.Layouts
+@using SportsStatistics.Web.Common.Enums
+@using SportsStatistics.Web.Common.Models
+@using SportsStatistics.Web.Contracts.Requests
+@using SportsStatistics.Web.Services
+@using System.Net.Http
+@using System.Net.Http.Json
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
+
+@inject IDialogService DialogService
+@inject IToastService ToastService
+@inject IMessenger Messenger
+@inject IClubNameService ClubNameService
+@inject NavigationManager Navigation

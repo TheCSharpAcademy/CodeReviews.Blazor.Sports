@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <UserSecretsId>dotnet-SportsStatistics.Tools.DatabaseSeeder-6cc79c78-d9df-4da2-85d3-ed79c559ed13</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Bogus" />
+    <PackageReference Include="CountryData.Bogus" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SportsStatistics.Aspire.ServiceDefaults\SportsStatistics.Aspire.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\SportsStatistics.Infrastructure\SportsStatistics.Infrastructure.csproj" />
+    <ProjectReference Include="..\SportsStatistics.SharedKernel\SportsStatistics.SharedKernel.csproj" />
+  </ItemGroup>
+</Project>

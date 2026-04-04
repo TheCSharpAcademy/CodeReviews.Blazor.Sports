@@ -1,0 +1,144 @@
+﻿@implements IDialogContentComponent<IQueryable<PlayerFixtureStatisticsDto>>
+
+@* Header *@
+<FluentDialogHeader ShowDismiss="true">
+    <FluentStack VerticalAlignment="VerticalAlignment.Center">
+        <FluentLabel Typo="Typography.PaneHeader">
+            @Dialog.Instance.Parameters.Title
+        </FluentLabel>
+    </FluentStack>
+</FluentDialogHeader>
+
+@* Body *@
+<FluentDialogBody>
+
+    <FluentTabs @bind-ActiveTabId="@ActiveTabId" Width="100%" Size="TabSize.Large">
+                    
+        <FluentTab Id="tab-1" Label="Overall">
+            <div style="display: table; table-layout: fixed; width: 100%;">
+                <div style="overflow-x: auto;">
+                    <FluentDataGrid Items="@Content"
+                                    ResizableColumns="true"
+                                    ShowHover
+                                    Style="min-width: max-content;">
+
+                        <PropertyColumn Property="@(p => p.PlayerName)" Title="Player" Sortable="true" />
+
+                        <PropertyColumn Property="@(p => p.Position)" Title="Position" Sortable="true" />
+
+                        <PropertyColumn Property="@(p => p.MinutesPlayed)" Title="Minutes Played" Sortable="true" IsDefaultSortColumn InitialSortDirection="SortDirection.Descending" />
+
+                        <PropertyColumn Property="@(p => p.GoalCount)" Title="Goals" Sortable="true" />
+
+                        <PropertyColumn Property="@(p => p.GoalAssistCount)" Title="Assists" Sortable="true" />
+
+                        <PropertyColumn Property="@(p => p.YellowCardCount)" Title="Yellow Cards" Sortable="true" />
+
+                        <PropertyColumn Property="@(p => p.RedCardCount)" Title="Red Cards" Sortable="true" />
+
+                    </FluentDataGrid>
+                </div>
+            </div>
+        </FluentTab>
+
+        <FluentTab Id="tab-2" Label="Attack">
+            <div style="display: table; table-layout: fixed; width: 100%;">
+                <div style="overflow-x: auto;">
+                    <FluentDataGrid Items="@Content"
+                                    ResizableColumns="true"
+                                    ShowHover
+                                    Style="min-width: max-content;">
+
+                        <PropertyColumn Property="@(p => p.PlayerName)" Title="Player" Sortable="true" />
+
+                        <PropertyColumn Property="@(p => p.Position)" Title="Position" Sortable="true" />
+
+                        <PropertyColumn Property="@(p => p.GoalCount)" Title="Goals" Sortable="true" IsDefaultSortColumn InitialSortDirection="SortDirection.Descending" />
+
+                        <PropertyColumn Property="@(p => p.ShotCount)" Title="Shots" Sortable="true" />
+
+                        <PropertyColumn Property="@(p => p.ShotOnTargetCount)" Title="Shots on target" Sortable="true" />
+
+                        <PropertyColumn Property="@(p => p.ShotOffTargetCount)" Title="Shots off target" Sortable="true" />
+
+                    </FluentDataGrid>
+                </div>
+            </div>
+        </FluentTab>
+
+        <FluentTab Id="tab-3" Label="Possession">
+            <div style="display: table; table-layout: fixed; width: 100%;">
+                <div style="overflow-x: auto;">
+                    <FluentDataGrid Items="@Content"
+                                    ResizableColumns="true"
+                                    ShowHover
+                                    Style="min-width: max-content;">
+
+                        <PropertyColumn Property="@(p => p.PlayerName)" Title="Player" Sortable="true" />
+
+                        <PropertyColumn Property="@(p => p.Position)" Title="Position" Sortable="true" />
+
+                        <PropertyColumn Property="@(p => p.PassCount)" Title="Passes" Sortable="true" IsDefaultSortColumn InitialSortDirection="SortDirection.Descending" />
+
+                        <PropertyColumn Property="@(p => p.PassSuccessCount)" Title="Successful passes" Sortable="true" />
+
+                        <PropertyColumn Property="@(p => p.PassFailureCount)" Title="Failed passes" Sortable="true" />
+
+                        <PropertyColumn Property="@(p => p.GoalAssistCount)" Title="Assists" Sortable="true" />
+
+                        <PropertyColumn Property="@(p => p.FoulWonCount)" Title="Fouls won" Sortable="true" />
+
+                    </FluentDataGrid>
+                </div>
+            </div>
+        </FluentTab>
+        
+        <FluentTab Id="tab-4" Label="Defence">
+            <div style="display: table; table-layout: fixed; width: 100%;">
+                <div style="overflow-x: auto;">
+                    <FluentDataGrid Items="@Content"
+                                    ResizableColumns="true"
+                                    ShowHover
+                                    Style="min-width: max-content;">
+
+                        <PropertyColumn Property="@(p => p.PlayerName)" Title="Player" Sortable="true" />
+
+                        <PropertyColumn Property="@(p => p.Position)" Title="Position" Sortable="true" />
+
+                        <PropertyColumn Property="@(p => p.TackleCount)" Title="Tackles" Sortable="true" IsDefaultSortColumn InitialSortDirection="SortDirection.Descending" />
+
+                        <PropertyColumn Property="@(p => p.SaveCount)" Title="Saves" Sortable="true" />
+
+                        <PropertyColumn Property="@(p => p.FoulConcededCount)" Title="Fouls conceded" Sortable="true" />
+
+                        <PropertyColumn Property="@(p => p.OwnGoalCount)" Title="Own goals" Sortable="true" />
+
+                    </FluentDataGrid>
+                </div>
+            </div>
+        </FluentTab>
+
+    </FluentTabs>
+
+</FluentDialogBody>
+
+
+@* Footer *@
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Accent" OnClick="@CloseAsync">Close</FluentButton>
+</FluentDialogFooter>
+
+@code {
+    private string ActiveTabId = "tab-1";
+
+    [Parameter]
+    public IQueryable<PlayerFixtureStatisticsDto> Content { get; set; } = default!;
+
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
+
+    private async Task CloseAsync()
+    {
+        await Dialog.CloseAsync();
+    }
+}

@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  
+  <ItemGroup>
+    <ProjectReference Include="..\SportsStatistics.SharedKernel\SportsStatistics.SharedKernel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SportsStatistics.Application.Tests" />
+    <InternalsVisibleTo Include="SportsStatistics.Domain.Tests" />
+    <InternalsVisibleTo Include="SportsStatistics.ArchitectureTests" />
+  </ItemGroup>
+  
+</Project>

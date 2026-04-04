@@ -1,0 +1,756 @@
+@page "/match-tracker"
+@implements IDisposable
+
+<PageTitle>Match Tracker</PageTitle>
+
+<FluentCard Style="overflow-y: auto;" MinimalStyle>
+
+    <FluentBreadcrumb Style="margin-bottom: 1rem;">
+        <FluentBreadcrumbItem Appearance="Appearance.Accent">
+            Match Tracker
+        </FluentBreadcrumbItem>
+    </FluentBreadcrumb>
+
+    @switch (CurrentPageState)
+    {
+        case PageState.FixtureSelect:
+            <FixtureSelector TodaysFixture="@Fixture"
+                             OnFixtureSelected="FixtureSelected"
+                             IsLoading="@IsLoadingFixture" />
+            break;
+        case PageState.TeamsheetSelect:
+            <TeamsheetSelector Players="@Players"
+                               OnTeamsheetConfirmed="TeamsheetConfirmed"
+                               OnCancelled="TeamsheetCancelled"
+                               IsLoading="@(IsLoadingPlayers || IsLoadingTeamsheet)" />
+            break;
+        case PageState.MatchTracking:
+            <FluentStack Orientation="Orientation.Vertical">
+                <FluentCard AreaRestricted="false">
+                    <MatchHeader Fixture="@Fixture" GameClock="@gameClock" CurrentMatchPeriod="@currentPeriod" />
+                    <MatchEvents CurrentMatchPeriod="@currentPeriod"
+                                 IsHomeGame="@IsHomeGame"
+                                 StartingPlayers="@CurrentOnPitchPlayers"
+                                 OnStartFirstHalf="StartFirstHalf"
+                                 OnFinishFirstHalf="FinishFirstHalf"
+                                 OnStartSecondHalf="StartSecondHalf"
+                                 OnFinishSecondHalf="FinishSecondHalf"
+                                 OnOurClubGoal="TeamGoal"
+                                 OnOpponentGoal="OpponentGoal" />
+                </FluentCard>
+                <FluentCard AreaRestricted="false">
+                    <PlayerEvents Players="@StartingPlayers"
+                                  SubstitutePlayers="@AvailableSubstitutes"
+                                  PlayersSubstitutedOff="@_substitutedOffPlayerIds"
+                                  PlayersSubstitutedOn="@_substitutedOnPlayerIds"
+                                  PlayerStatuses="@_playerStatuses"
+                                  CurrentMatchPeriod="@currentPeriod"
+                                  FixtureId="@Fixture!.Id"
+                                  OnAddPlayerEvent="AddPlayerEvent"
+                                  OnAddSubstitutionEvent="AddSubstitutionEvent" />
+                </FluentCard>
+                <FluentCard AreaRestricted="false">
+                    <Overview MatchEvents="@DisplayEvents" />
+                </FluentCard>
+            </FluentStack>
+            break;
+        default:
+            break;
+    }
+
+</FluentCard>
+
+    @code {
+    private enum PageState
+    {
+        FixtureSelect = 0,
+        TeamsheetSelect = 1,
+        MatchTracking = 2,
+    }
+
+    private bool IsLoadingFixture { get; set; } = true;
+    private bool IsLoadingPlayers { get; set; } = true;
+    private bool IsLoadingTeamsheet { get; set; } = true;
+
+    public FixtureDto? Fixture { get; set; }
+
+    public List<MatchEventResponse> PersistedEvents { get; set; } = [];
+
+    public List<DisplayMatchEventDto> DisplayEvents { get; set; } = [];
+
+    public List<PlayerDto>? Players { get; set; }
+
+    public List<PlayerDto> StartingPlayers { get; set; } = [];
+
+    public List<PlayerDto> SubstitutePlayers { get; set; } = [];
+
+    private HashSet<Guid> _substitutedOffPlayerIds = [];
+    private HashSet<Guid> _substitutedOnPlayerIds = [];
+    private Dictionary<Guid, PlayerStatusDto> _playerStatuses = new();
+
+    private List<PlayerDto> AvailableSubstitutes =>
+        SubstitutePlayers.Where(p => !_substitutedOnPlayerIds.Contains(p.Id)).ToList();
+
+    public TeamsheetResponse? ExistingTeamsheet { get; set; }
+
+    private PageState CurrentPageState = PageState.FixtureSelect;
+
+    private bool IsHomeGame => Fixture?.LocationId == 0;
+
+    private List<PlayerDto> CurrentOnPitchPlayers =>
+        StartingPlayers.Where(p => !_substitutedOffPlayerIds.Contains(p.Id)).ToList();
+
+    private DateTime? FirstHalfStartedAtUtc => PersistedEvents.FirstOrDefault(e => e.EventTypeName == MatchEventType.FirstHalfStarted.Name)?.OccurredAtUtc;
+    private DateTime? FirstHalfFinishedAtUtc => PersistedEvents.FirstOrDefault(e => e.EventTypeName == MatchEventType.FirstHalfFinished.Name)?.OccurredAtUtc;
+    private DateTime? SecondHalfStartedAtUtc => PersistedEvents.FirstOrDefault(e => e.EventTypeName == MatchEventType.SecondHalfStarted.Name)?.OccurredAtUtc;
+    private DateTime? SecondHalfFinishedAtUtc => PersistedEvents.FirstOrDefault(e => e.EventTypeName == MatchEventType.SecondHalfFinished.Name)?.OccurredAtUtc;
+
+    private MatchPeriod currentPeriod = MatchPeriod.PreMatch;
+    private System.Timers.Timer? _timer;
+    private DateTime? matchStartedAtUtc;
+    private TimeSpan gameClock
+    {
+        get
+        {
+            if (!matchStartedAtUtc.HasValue)
+                return TimeSpan.Zero;
+
+            var elapsedThisPeriod = DateTime.UtcNow - matchStartedAtUtc.Value;
+
+            if (currentPeriod == MatchPeriod.FirstHalf)
+            {
+                return elapsedThisPeriod;
+            }
+
+            if (currentPeriod == MatchPeriod.SecondHalf)
+            {
+                return TimeSpan.FromMinutes(Minute.FirstHalfEndMinute) + elapsedThisPeriod;
+            }
+
+            return TimeSpan.Zero;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFixtureAsync(DateOnly.FromDateTime(DateTime.UtcNow));
+        await LoadPlayersAsync();
+        await LoadCurrentPageState();
+    }
+
+    private async Task LoadFixtureAsync(DateOnly fixtureDate)
+    {
+        IsLoadingFixture = true;
+
+        var request = new GetFixturesByDateQuery(fixtureDate);
+        var result = await Messenger.SendAsync(request);
+
+        if (result.IsSuccess)
+        {
+            Fixture = result.Value.FirstOrDefault()?.ToDto();
+        }
+        else
+        {
+            Fixture = null;
+            ToastService.ShowError(result.Error.Description);
+        }
+
+        IsLoadingFixture = false;
+    }
+
+    private async Task LoadPlayersAsync()
+    {
+        IsLoadingPlayers = true;
+
+        var request = new GetAllPlayersQuery(PlayerClubStatusFilter.AtClub);
+        var result = await Messenger.SendAsync(request);
+
+        if (result.IsSuccess)
+        {
+            Players = result.Value.Select(player => player.ToDto()).ToList();
+        }
+        else
+        {
+            Players = [];
+            ToastService.ShowError(result.Error.Description);
+        }
+
+        IsLoadingPlayers = false;
+    }
+
+    private async Task LoadMatchEventsAsync()
+    {
+        if (Fixture is null) return;
+
+        var request = new GetMatchEventsByFixtureIdQuery(Fixture.Id);
+        var result = await Messenger.SendAsync(request);
+        if (result.IsFailure)
+        {
+            PersistedEvents = [];
+            return;
+        }
+
+        PersistedEvents = result.Value;
+        UpdateDisplayEvents();
+        UpdatePlayerStatuses();
+    }
+
+    private async Task LoadExistingTeamsheetAsync()
+    {
+        if (Fixture is null || Players is null) return;
+
+        IsLoadingTeamsheet = true;
+
+        var request = new GetTeamsheetByFixtureIdQuery(Fixture.Id);
+        var result = await Messenger.SendAsync(request);
+
+        if (result.IsSuccess)
+        {
+            ExistingTeamsheet = result.Value;
+        }
+        else
+        {
+            ExistingTeamsheet = null;
+        }
+
+        if (ExistingTeamsheet is not null)
+        {
+            var playerDict = Players.ToDictionary(p => p.Id);
+
+            StartingPlayers = ExistingTeamsheet.Starters
+                .Where(s => playerDict.ContainsKey(s.PlayerId))
+                .Select(s => playerDict[s.PlayerId])
+                .ToList();
+
+            SubstitutePlayers = ExistingTeamsheet.Substitutes
+                .Where(s => playerDict.ContainsKey(s.PlayerId))
+                .Select(s => playerDict[s.PlayerId])
+                .ToList();
+        }
+
+        IsLoadingTeamsheet = false;
+    }
+
+    private async Task LoadSubstitutionsAsync()
+    {
+        if (Fixture is null) return;
+
+        var query = new GetSubstitutionsByFixtureIdQuery(Fixture.Id);
+        var result = await Messenger.SendAsync(query);
+
+        if (result.IsFailure)
+        {
+            _substitutedOffPlayerIds = [];
+            _substitutedOnPlayerIds = [];
+            return;
+        }
+
+        _substitutedOffPlayerIds = result.Value.Select(s => s.PlayerOffId).ToHashSet();
+        _substitutedOnPlayerIds = result.Value.Select(s => s.PlayerOnId).ToHashSet();
+
+        foreach (var playerOnId in _substitutedOnPlayerIds)
+        {
+            var playerOn = SubstitutePlayers.FirstOrDefault(p => p.Id == playerOnId);
+            if (playerOn is not null && !StartingPlayers.Contains(playerOn))
+            {
+                StartingPlayers.Add(playerOn);
+            }
+        }
+    }
+
+    private void UpdateDisplayEvents()
+    {
+        DisplayEvents = PersistedEvents
+            .Select(e => new DisplayMatchEventDto(e.MinuteDisplay, e.EventTypeDisplay, e.OccurredAtUtc))
+            .OrderBy(e => e.OccurredAtUtc)
+            .ToList();
+    }
+
+    private void UpdatePlayerStatuses()
+    {
+        var statuses = new Dictionary<Guid, PlayerStatusDto>();
+        var allPlayers = StartingPlayers.Concat(SubstitutePlayers).ToList();
+
+        foreach (var player in allPlayers)
+        {
+            var playerEvents = PersistedEvents
+                .Where(e => e.PlayerId == player.Id)
+                .ToList();
+
+            var hasYellowCard = playerEvents.Any(e => e.EventTypeName == PlayerEventType.YellowCard.Name);
+            var hasRedCard = playerEvents.Any(e => e.EventTypeName == PlayerEventType.RedCard.Name);
+
+            var goals = playerEvents
+                .Where(e => e.EventTypeName == PlayerEventType.Goal.Name)
+                .OrderByDescending(e => e.OccurredAtUtc)
+                .Select(e => new GoalEventDto(e.OccurredAtUtc))
+                .ToList();
+
+            var assists = playerEvents
+                .Where(e => e.EventTypeName == PlayerEventType.GoalAssist.Name)
+                .OrderByDescending(e => e.OccurredAtUtc)
+                .Select(e => new AssistEventDto(e.OccurredAtUtc))
+                .ToList();
+
+            var ownGoals = playerEvents
+                .Where(e => e.EventTypeName == PlayerEventType.OwnGoal.Name)
+                .OrderByDescending(e => e.OccurredAtUtc)
+                .Select(e => new OwnGoalEventDto(e.OccurredAtUtc))
+                .ToList();
+
+
+            SubstitutionStatusDto? substitution = null;
+            if (_substitutedOffPlayerIds.Contains(player.Id))
+            {
+                substitution = new SubstitutionStatusDto(false, true, DateTime.UtcNow);
+            }
+            else if (_substitutedOnPlayerIds.Contains(player.Id))
+            {
+                substitution = new SubstitutionStatusDto(true, false, DateTime.UtcNow);
+            }
+
+            statuses[player.Id] = new PlayerStatusDto(
+                player.Id,
+                hasYellowCard,
+                hasRedCard,
+                goals,
+                assists,
+                ownGoals,
+                substitution);
+        }
+
+        _playerStatuses = statuses;
+    }
+
+    private async Task FixtureSelected(Guid fixtureId)
+    {
+        await LoadExistingTeamsheetAsync();
+        CurrentPageState++;
+    }
+
+    private async Task TeamsheetConfirmed(IReadOnlyList<PlayerDto> selectedPlayers)
+    {
+        if (Fixture is null || Players is null) return;
+
+        var starterIds = selectedPlayers.Select(p => p.Id).ToList();
+
+        var command = new CreateTeamsheetCommand(Fixture.Id, starterIds);
+        var result = await Messenger.SendAsync(command);
+        if (result.IsFailure)
+        {
+            ToastService.ShowError(result.Error.Description);
+            return;
+        }
+
+        StartingPlayers = selectedPlayers.ToList();
+        SubstitutePlayers = Players
+            .Where(p => !starterIds.Contains(p.Id))
+            .ToList();
+
+        CurrentPageState++;
+        await LoadSubstitutionsAsync();
+        await LoadMatchEventsAsync();
+    }
+
+    private async Task ProceedToMatchTracking()
+    {
+        CurrentPageState++;
+        await LoadSubstitutionsAsync();
+        await LoadMatchEventsAsync();
+
+        RestoreMatchState();
+    }
+
+    private async Task TeamsheetCancelled()
+    {
+        CurrentPageState--;
+        await Task.CompletedTask;
+    }
+
+    private async Task StartFirstHalf()
+    {
+        var occuredAtUtc = DateTime.UtcNow;
+
+        matchStartedAtUtc = occuredAtUtc;
+        StartTimer();
+
+        var minute = MatchMinuteCalculator.Calculate(matchStartedAtUtc.Value, occuredAtUtc, null, currentPeriod);
+        currentPeriod = MatchPeriod.FirstHalf;
+
+        await UpdateFixtureStatusAsync(Status.InProgress);
+        await RecordMatchEvent(MatchEventType.FirstHalfStarted.Value, minute.BaseMinute, minute.StoppageMinute, occuredAtUtc);
+    }
+
+    private async Task FinishFirstHalf()
+    {
+        if (FirstHalfStartedAtUtc is null) return;
+
+        var occuredAtUtc = DateTime.UtcNow;
+
+        matchStartedAtUtc = null;
+        StopTimer();
+
+        var minute = MatchMinuteCalculator.Calculate(DateTime.UtcNow, FirstHalfStartedAtUtc.Value, null, currentPeriod);
+        currentPeriod = MatchPeriod.HalfTime;
+
+        await RecordMatchEvent(MatchEventType.FirstHalfFinished.Value, minute.BaseMinute, minute.StoppageMinute, occuredAtUtc);
+    }
+
+    private async Task StartSecondHalf()
+    {
+        if (FirstHalfStartedAtUtc is null) return;
+
+        var occuredAtUtc = DateTime.UtcNow;
+
+        matchStartedAtUtc = occuredAtUtc;
+        StartTimer();
+
+        var minute = MatchMinuteCalculator.Calculate(matchStartedAtUtc.Value, FirstHalfStartedAtUtc.Value, matchStartedAtUtc, currentPeriod);
+        currentPeriod = MatchPeriod.SecondHalf;
+
+        await RecordMatchEvent(MatchEventType.SecondHalfStarted.Value, minute.BaseMinute, minute.StoppageMinute, occuredAtUtc);
+    }
+
+    private async Task FinishSecondHalf()
+    {
+        if (FirstHalfStartedAtUtc is null) return;
+
+        var occuredAtUtc = DateTime.UtcNow;
+
+        matchStartedAtUtc = null;
+        StopTimer();
+
+        var minute = MatchMinuteCalculator.Calculate(occuredAtUtc, FirstHalfStartedAtUtc.Value, SecondHalfStartedAtUtc, currentPeriod);
+        currentPeriod = MatchPeriod.FullTime;
+
+        await UpdateFixtureStatusAsync(Status.Completed);
+        await RecordMatchEvent(MatchEventType.SecondHalfFinished.Value, minute.BaseMinute, minute.StoppageMinute, occuredAtUtc);
+    }
+
+    private async Task TeamGoal(GoalDialogData result)
+    {
+        if (Fixture is null) return;
+        if (FirstHalfStartedAtUtc is null) return;
+
+        if (IsHomeGame)
+        {
+            await UpdateFixtureScoreAsync(Fixture.HomeGoals + 1, Fixture.AwayGoals);
+        }
+        else
+        {
+            await UpdateFixtureScoreAsync(Fixture.HomeGoals, Fixture.AwayGoals + 1);
+        }
+
+        var minute = MatchMinuteCalculator.Calculate(result.OccurredAtUtc, FirstHalfStartedAtUtc.Value, SecondHalfStartedAtUtc, currentPeriod);
+
+        var matchEventType = IsHomeGame ? MatchEventType.HomeGoal.Value : MatchEventType.AwayGoal.Value;
+
+        await RecordMatchEvent(matchEventType, minute.BaseMinute, minute.StoppageMinute, result.OccurredAtUtc);
+
+        if (!result.IsOwnGoal && result.ScorerPlayerId.HasValue)
+        {
+            await RecordPlayerEvent(result.ScorerPlayerId.Value, PlayerEventType.Goal.Value, minute.BaseMinute, minute.StoppageMinute, result.OccurredAtUtc);
+
+            if (result.AssistPlayerId.HasValue)
+            {
+                await RecordPlayerEvent(result.AssistPlayerId.Value, PlayerEventType.GoalAssist.Value, minute.BaseMinute, minute.StoppageMinute, result.OccurredAtUtc);
+            }
+        }
+
+        await LoadMatchEventsAsync();
+    }
+
+    private async Task OpponentGoal(GoalDialogData result)
+    {
+        if (Fixture is null) return;
+        if (FirstHalfStartedAtUtc is null) return;
+
+        if (IsHomeGame)
+        {
+            await UpdateFixtureScoreAsync(Fixture.HomeGoals, Fixture.AwayGoals + 1);
+        }
+        else
+        {
+            await UpdateFixtureScoreAsync(Fixture.HomeGoals + 1, Fixture.AwayGoals);
+        }
+
+        var minute = MatchMinuteCalculator.Calculate(result.OccurredAtUtc, FirstHalfStartedAtUtc.Value, SecondHalfStartedAtUtc, currentPeriod);
+
+        var matchEventType = IsHomeGame ? MatchEventType.AwayGoal.Value : MatchEventType.HomeGoal.Value;
+        await RecordMatchEvent(matchEventType, minute.BaseMinute, minute.StoppageMinute, result.OccurredAtUtc);
+
+        if (result.IsOwnGoal && result.ScorerPlayerId.HasValue)
+        {
+            await RecordPlayerEvent(result.ScorerPlayerId.Value, PlayerEventType.OwnGoal.Value, minute.BaseMinute, minute.StoppageMinute, result.OccurredAtUtc);
+        }
+
+        await LoadMatchEventsAsync();
+    }
+
+    private async Task RecordMatchEvent(int eventTypeId, int baseMinute, int? stoppageMinute = null, DateTime? occurredAtUtc = null)
+    {
+        if (Fixture is null) return;
+
+        var command = new CreateMatchEventCommand(
+            Fixture.Id,
+            eventTypeId,
+            baseMinute,
+            stoppageMinute,
+            occurredAtUtc ?? DateTime.UtcNow);
+
+        var result = await Messenger.SendAsync(command);
+        if (result.IsFailure)
+        {
+            ToastService.ShowError(result.Error.Description);
+            return;
+        }
+
+        await LoadMatchEventsAsync();
+    }
+
+    private async Task RecordPlayerEvent(Guid playerId, int playerEventTypeId, int baseMinute, int? stoppageMinute, DateTime occurredAtUtc)
+    {
+        if (Fixture is null) return;
+
+        var player = StartingPlayers.FirstOrDefault(p => p.Id == playerId);
+        var playerName = player?.Name ?? "Unknown";
+
+        var command = new CreatePlayerEventCommand(
+            Fixture.Id,
+            playerId,
+            playerEventTypeId,
+            baseMinute,
+            stoppageMinute,
+            occurredAtUtc);
+
+        var result = await Messenger.SendAsync(command);
+        if (result.IsFailure)
+        {
+            ToastService.ShowError(result.Error.Description);
+            return;
+        }
+    }
+
+    private async Task AddPlayerEvent(PlayerEventDto playerEvent)
+    {
+        if (FirstHalfStartedAtUtc is null) return;
+
+        var minute = MatchMinuteCalculator.Calculate(playerEvent.OccurredAtUtc, FirstHalfStartedAtUtc.Value, SecondHalfStartedAtUtc, currentPeriod);
+
+        if (playerEvent.PlayerEventTypeId == PlayerEventType.YellowCard.Value)
+        {
+            if (PersistedEvents.Any(e => e.PlayerId == playerEvent.PlayerId && e.EventTypeDisplay == PlayerEventType.YellowCard.Name))
+            {
+                playerEvent = playerEvent with { PlayerEventTypeId = PlayerEventType.RedCard.Value };
+            }
+        }
+
+        var command = new CreatePlayerEventCommand(
+            playerEvent.FixtureId,
+            playerEvent.PlayerId,
+            playerEvent.PlayerEventTypeId,
+            minute.BaseMinute,
+            minute.StoppageMinute,
+            playerEvent.OccurredAtUtc);
+
+        var result = await Messenger.SendAsync(command);
+        if (result.IsFailure)
+        {
+            ToastService.ShowError(result.Error.Description);
+            return;
+        }
+
+        await LoadMatchEventsAsync();
+    }
+
+    private async Task AddSubstitutionEvent(SubstitutionEventDto substitutionEvent)
+    {
+        if (FirstHalfStartedAtUtc is null) return;
+
+        var minute = MatchMinuteCalculator.Calculate(substitutionEvent.OccurredAtUtc, FirstHalfStartedAtUtc.Value, SecondHalfStartedAtUtc, currentPeriod);
+
+        var command = new CreateSubstitutionEventCommand(
+            substitutionEvent.FixtureId,
+            substitutionEvent.PlayerOffId,
+            substitutionEvent.PlayerOnId,
+            minute.BaseMinute,
+            minute.StoppageMinute,
+            substitutionEvent.OccurredAtUtc);
+
+        var result = await Messenger.SendAsync(command);
+        if (result.IsFailure)
+        {
+            ToastService.ShowError(result.Error.Description);
+            return;
+        }
+
+        _substitutedOffPlayerIds.Add(substitutionEvent.PlayerOffId);
+        _substitutedOnPlayerIds.Add(substitutionEvent.PlayerOnId);
+
+        var playerOn = SubstitutePlayers.FirstOrDefault(p => p.Id == substitutionEvent.PlayerOnId);
+        if (playerOn is not null && !StartingPlayers.Contains(playerOn))
+        {
+            StartingPlayers.Add(playerOn);
+        }
+
+        await LoadMatchEventsAsync();
+    }
+
+    private void RestoreMatchState()
+    {
+        if (SecondHalfFinishedAtUtc.HasValue)
+        {
+            currentPeriod = MatchPeriod.FullTime;
+            matchStartedAtUtc = null;
+            return;
+        }
+
+        if (SecondHalfStartedAtUtc.HasValue)
+        {
+            currentPeriod = MatchPeriod.SecondHalf;
+            matchStartedAtUtc = SecondHalfStartedAtUtc;
+            StartTimer();
+            return;
+        }
+
+        if (FirstHalfFinishedAtUtc.HasValue)
+        {
+            currentPeriod = MatchPeriod.HalfTime;
+            matchStartedAtUtc = null;
+            return;
+        }
+
+        if (FirstHalfStartedAtUtc.HasValue)
+        {
+            currentPeriod = MatchPeriod.FirstHalf;
+            matchStartedAtUtc = FirstHalfStartedAtUtc;
+            StartTimer();
+            return;
+        }
+
+        currentPeriod = MatchPeriod.PreMatch;
+        matchStartedAtUtc = null;
+    }
+
+    private void StartTimer()
+    {
+        _timer = new System.Timers.Timer(1000);
+        _timer.Elapsed += (_, _) => InvokeAsync(StateHasChanged);
+        _timer.Start();
+    }
+
+    private void StopTimer()
+    {
+        _timer?.Stop();
+        _timer?.Dispose();
+    }
+
+    private PageState GetPageState()
+    {
+        if (PersistedEvents.Any(e => e.EventTypeDisplay == MatchEventType.FirstHalfStarted.Name))
+        {
+            return PageState.MatchTracking;
+        }
+
+        if (ExistingTeamsheet is not null)
+        {
+            return PageState.TeamsheetSelect;
+        }
+
+        return PageState.FixtureSelect;
+    }
+
+    private bool IsMatchInProgress()
+    {
+        var hasSecondHalfStarted = PersistedEvents.Any(e => e.EventTypeDisplay == MatchEventType.SecondHalfStarted.Name);
+        var hasSecondHalfFinished = PersistedEvents.Any(e => e.EventTypeDisplay == MatchEventType.SecondHalfFinished.Name);
+        var hasFirstHalfStarted = PersistedEvents.Any(e => e.EventTypeDisplay == MatchEventType.FirstHalfStarted.Name);
+        var hasFirstHalfFinished = PersistedEvents.Any(e => e.EventTypeDisplay == MatchEventType.FirstHalfFinished.Name);
+
+        if (hasSecondHalfStarted && !hasSecondHalfFinished)
+        {
+            return true;
+        }
+
+        if (hasFirstHalfStarted && !hasFirstHalfFinished)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private async Task LoadCurrentPageState()
+    {
+        if (Fixture is null)
+        {
+            CurrentPageState = PageState.FixtureSelect;
+            return;
+        }
+
+        await LoadExistingTeamsheetAsync();
+        if (ExistingTeamsheet is null)
+        {
+            CurrentPageState = PageState.FixtureSelect;
+            return;
+        }
+
+        CurrentPageState = PageState.MatchTracking;
+
+        await LoadSubstitutionsAsync();
+        await LoadMatchEventsAsync();
+
+        RestoreMatchState();
+    }
+
+    private async Task UpdateFixtureScoreAsync(int homeGoals, int awayGoals)
+    {
+        if (Fixture is null) return;
+
+        var scoreResult = Score.Create(homeGoals, awayGoals);
+        if (scoreResult.IsFailure)
+        {
+            ToastService.ShowError(scoreResult.Error.Description);
+            return;
+        }
+
+        var score = scoreResult.Value;
+
+        var command = new UpdateFixtureScoreCommand(
+            Fixture.Id,
+            score);
+
+        var result = await Messenger.SendAsync(command);
+        if (result.IsFailure)
+        {
+            ToastService.ShowError(result.Error.Description);
+            return;
+        }
+
+        Fixture = Fixture with { HomeGoals = score.HomeGoals, AwayGoals = score.AwayGoals };
+    }
+
+    private async Task UpdateFixtureStatusAsync(Status status)
+    {
+        if (Fixture is null) return;
+
+        var command = new UpdateFixtureStatusCommand(
+            Fixture.Id,
+            status);
+
+        var result = await Messenger.SendAsync(command);
+        if (result.IsFailure)
+        {
+            ToastService.ShowError(result.Error.Description);
+            return;
+        }
+
+        Fixture = Fixture with { Status = status.Name };
+    }
+
+    public void Dispose()
+    {
+        _timer?.Stop();
+        _timer?.Dispose();
+    }
+}

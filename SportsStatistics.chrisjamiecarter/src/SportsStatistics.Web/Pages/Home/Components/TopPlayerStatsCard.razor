@@ -1,0 +1,95 @@
+﻿@if (IsLoading)
+{
+    <SkeletonCard />
+    return;
+}
+
+<FluentCard>
+    <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Stretch">
+
+        <FluentStack VerticalAlignment="VerticalAlignment.Center">
+            <FluentIcon Value="@Icon" Color="Color.Accent" />
+            <FluentLabel Weight="FontWeight.Bold" Typo="Typography.H3">@Title</FluentLabel>
+        </FluentStack>
+                
+        <FluentDivider />
+        
+        @if (TopPlayerStats?.PlayerStats is null || TopPlayerStats.PlayerStats.Count == 0)
+        {
+            <FluentSpacer />
+            <FluentStack Orientation="Orientation.Vertical" 
+                         VerticalAlignment="VerticalAlignment.Center"
+                         HorizontalAlignment="HorizontalAlignment.Center">
+                <FluentSpacer />
+                <FluentIcon Value="@(new Icons.Regular.Size24.Person())" Color="Color.Accent" />
+                <FluentSpacer />
+                <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold">@EmptyMessage</FluentLabel>
+                <FluentSpacer />
+            </FluentStack>
+            <FluentSpacer />
+        }
+        else
+        {
+            <FluentSpacer />
+            <FluentStack Orientation="Orientation.Vertical" 
+                         Style="padding: 0;">
+                @foreach (var (player, index) in TopPlayerStats.PlayerStats.Select((player, index) => (player, index)))
+                {
+                    <FluentStack Orientation="Orientation.Horizontal" 
+                                 VerticalAlignment="VerticalAlignment.Center"
+                                 HorizontalAlignment="HorizontalAlignment.SpaceBetween" 
+                                 Style="padding: 0.5rem 0.25rem; width: 100%;">
+
+                        <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Start" VerticalGap="0">
+                            <FluentLabel Weight="FontWeight.Bold">@player.PlayerName</FluentLabel>
+                            <FluentLabel Style="font-size: 0.75rem; color: var(--neutral-foreground-hint);">
+                                @player.PositionName
+                            </FluentLabel>
+                        </FluentStack>
+                        
+                        @if (index == 0)
+                        {
+                            <div style="min-width: 32px; height: 32px; border-radius: 50%; background: var(--accent-fill-rest);
+                                display: flex; align-items: center; justify-content: center;
+                                font-weight: 700; font-size: 0.9rem; color: white;">
+                                @player.StatCount
+                            </div>
+                        }
+                        else
+                        {
+                            <div style="min-width: 32px; height: 32px; border-radius: 50%;
+                                display: flex; align-items: center; justify-content: center;
+                                font-weight: 700; font-size: 0.9rem;">
+                                @player.StatCount
+                            </div>
+                        }
+
+                    </FluentStack>
+
+                    @if (index < TopPlayerStats.PlayerStats.Count - 1)
+                    {
+                        <FluentDivider Style="width: 100%;" />
+                    }
+                }
+            </FluentStack>
+            <FluentSpacer />
+        }
+    </FluentStack>
+</FluentCard>
+
+@code {
+    [Parameter]
+    public bool IsLoading { get; set; } = true;
+
+    [Parameter]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public Icon? Icon { get; set; }
+
+    [Parameter]
+    public TopPlayerStatsCardDto? TopPlayerStats { get; set; }
+
+    [Parameter]
+    public string EmptyMessage { get; set; } = "No player stats";
+}

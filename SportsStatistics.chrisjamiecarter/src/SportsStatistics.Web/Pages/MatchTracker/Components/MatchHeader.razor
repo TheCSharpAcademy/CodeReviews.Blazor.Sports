@@ -1,0 +1,117 @@
+﻿@if (Fixture is null)
+{
+    return;
+}
+
+<FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center">
+
+    <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+    
+        <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+            <FluentIcon Value="@(new Icons.Regular.Size20.Calendar())"/>
+            <FluentLabel>@Fixture.DisplayKickoffDate</FluentLabel>
+        </FluentStack>
+
+        <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+            <FluentIcon Value="@(new Icons.Regular.Size20.Trophy())" />
+            <FluentLabel>@Fixture.CompetitionName</FluentLabel>
+        </FluentStack>
+
+        <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+            <FluentIcon Value="@(new Icons.Regular.Size20.Location())" />
+            <FluentLabel>@Fixture.Location</FluentLabel>
+        </FluentStack>
+
+    </FluentStack>
+
+    <FluentDivider Style="width: 100%;" Role="DividerRole.Presentation"></FluentDivider>
+
+    <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" Style="margin:2rem;">
+
+        <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+            <FluentLabel Typo="Typography.H3">@HomeTeamName</FluentLabel>
+        </FluentStack>
+
+        @if (CurrentMatchPeriod == MatchPeriod.PreMatch)
+        {
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+                <FluentLabel>@Fixture.DisplayKickoffTime</FluentLabel>
+            </FluentStack>
+        }
+        else
+        {
+            <FluentStack Orientation="Orientation.Vertical">
+                <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+                    <FluentLabel Typo="Typography.H3">@Fixture.HomeGoals</FluentLabel>
+                    <FluentLabel Typo="Typography.H3"> - </FluentLabel>
+                    <FluentLabel Typo="Typography.H3">@Fixture.AwayGoals</FluentLabel>
+                </FluentStack>
+
+                @if (CurrentMatchPeriod == MatchPeriod.FirstHalf || CurrentMatchPeriod == MatchPeriod.SecondHalf)
+                {
+                    <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+                        <FluentLabel Color="Color.Accent" Weight="FontWeight.Bold">@FormattedGameClock</FluentLabel>
+                    </FluentStack>
+                }
+                
+                @if (CurrentMatchPeriod == MatchPeriod.HalfTime)
+                {
+                    <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+                        <FluentLabel Color="Color.Accent" Weight="FontWeight.Bold">Half Time</FluentLabel>
+                    </FluentStack>
+                }
+
+                @if (CurrentMatchPeriod == MatchPeriod.FullTime)
+                {
+                    <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+                        <FluentLabel Color="Color.Accent" Weight="FontWeight.Bold">Full Time</FluentLabel>
+                    </FluentStack>
+                }
+
+            </FluentStack>
+        }
+
+        <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+            <FluentLabel Typo="Typography.H3">@AwayTeamName</FluentLabel>
+        </FluentStack>
+
+    </FluentStack>
+    
+</FluentStack>
+
+@code {
+    [Parameter] public FixtureDto? Fixture { get; set; }
+
+    [Parameter] public MatchPeriod CurrentMatchPeriod { get; set; } = MatchPeriod.PreMatch;
+
+    [Parameter] public TimeSpan GameClock { get; set; }
+
+    private const string HomeNamePlaceholder = "Home Team";
+    private const string AwayNamePlaceholder = "Away Team";
+
+    private string FormattedGameClock => $"{GameClock.TotalMinutes:00}:{GameClock.Seconds:00}";
+    private string FormattedCountdownClock => $"{(Fixture?.KickoffTimeUtc - DateTime.UtcNow):HH:mm:ss}";
+
+    private string _clubName = string.Empty;
+
+    private string HomeTeamName => Fixture?.Location switch
+    {
+        "Home" => _clubName,
+        "Away" => Fixture?.Opponent ?? HomeNamePlaceholder,
+        "Neutral" => _clubName,
+        _ => HomeNamePlaceholder
+    };
+
+    private string AwayTeamName => Fixture?.Location switch
+    {
+        "Home" => Fixture?.Opponent ?? AwayNamePlaceholder,
+        "Away" => _clubName,
+        "Neutral" => AwayNamePlaceholder,
+        _ => AwayNamePlaceholder
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _clubName = await ClubNameService.GetClubNameAsync();
+    }
+}

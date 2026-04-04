@@ -1,0 +1,109 @@
+﻿<FluentGrid>
+    <FluentGridItem xs="12" sm="12" md="12" lg="6" xl="6">
+        <FluentCard AreaRestricted="false">
+            <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Stretch">
+                
+                <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                    <FluentIcon Value="@(new Icons.Regular.Size24.Trophy())" Color="Color.Accent" />
+                    <FluentLabel Weight="FontWeight.Bold" Typo="Typography.Header">@HeaderText</FluentLabel>
+                </FluentStack>
+
+                <FluentDivider />
+
+                <EditForm Model="@Input" OnValidSubmit="HandleValidSubmitAsync" FormName="competition-form" style="width: 100%">
+                    <FluentValidator />
+
+                    <FluentStack Orientation="Orientation.Vertical">
+                        <div class="full-width">
+                            <FluentTextField Name="Input.Season" Value="@Input.Season?.Name" ReadOnly="true" Label="Season" Style="width: 100%" />
+                        </div>
+                        <div class="full-width">
+                            <FluentTextField Name="Input.Name" @bind-Value="Input.Name" AutoComplete="competition-name" Required="true" Placeholder="Name" Label="Name" Style="width: 100%" />
+                            <FluentValidationMessage For="() => Input.Name" class="text-danger" />
+                        </div>
+                        <div class="full-width">
+                            <FluentSelect Id="FormatSelect"
+                                          Name="Input.Format"
+                                          TOption=FormatOptionDto
+                                          Label="Format"
+                                          Items="FormatOptions"
+                                          Width="100%"
+                                          Placeholder="Select a format..."
+                                          OptionText="(p => p.Name)"
+                                          @bind-SelectedOption="Input.Format"
+                                          Required="!IsUpdateMode" />
+                            <FluentValidationMessage For="() => Input.Format" class="text-danger" />
+                        </div>
+                        <FluentStack Orientation="Orientation.Horizontal">
+                            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="width: 100%" Loading="IsSubmitting">
+                                @SubmitButtonText
+                            </FluentButton>
+                            <FluentButton Type="ButtonType.Button" Appearance="Appearance.Stealth" Style="width: 100%" OnClick="OnCancelClick">
+                                Cancel
+                            </FluentButton>
+                        </FluentStack>
+                    </FluentStack>
+                </EditForm>
+
+            </FluentStack>
+        </FluentCard>
+    </FluentGridItem>
+</FluentGrid>
+
+@code {
+    private bool IsSubmitting = false;
+    private IEnumerable<FormatOptionDto> FormatOptions = Format.List.Select(format => format.ToDto());
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    [Parameter]
+    public EventCallback<CompetitionFormModel> OnSubmit { get; set; }
+
+    [Parameter]
+    public CompetitionDto? SelectedCompetition { get; set; }
+
+    [Parameter]
+    public SeasonDto? SelectedSeason { get; set; }
+
+    [SupplyParameterFromForm]
+    private CompetitionFormModel Input { get; set; } = default!;
+
+    private bool IsUpdateMode => SelectedCompetition is not null;
+
+    private string HeaderText => $"{(IsUpdateMode ? "Edit" : "Add")} Competition";
+
+    private string SubmitButtonText => IsUpdateMode ? "Update" : "Create";
+
+    protected override void OnInitialized()
+    {
+        Input ??= new();
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (IsSubmitting)
+        {
+            return;
+        }
+
+        if (SelectedSeason is not null)
+        {
+            Input = SelectedCompetition.ToFormModel(SelectedSeason, FormatOptions);
+        }
+    }
+
+    private async Task OnCancelClick()
+    {
+        await OnCancel.InvokeAsync();
+    }
+
+    private async Task HandleValidSubmitAsync()
+    {
+        IsSubmitting = true;
+
+        await OnSubmit.InvokeAsync(Input);
+
+        IsSubmitting = false;
+    }
+}

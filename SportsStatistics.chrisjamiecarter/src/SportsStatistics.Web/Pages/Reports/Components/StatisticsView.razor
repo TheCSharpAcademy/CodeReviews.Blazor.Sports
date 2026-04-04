@@ -1,0 +1,103 @@
+﻿@if (IsLoading)
+{
+    <SkeletonTable RowCount="10" ColumnCount="8" />
+    return;
+}
+
+<FluentCard Style="padding: 1rem;">
+    <div style="display: table; table-layout: fixed; width: 100%;">
+        <div style="overflow-x: auto;">
+            <FluentDataGrid Items="@PlayerSeasonStatistics"
+                            Pagination="@Pagination"
+                            RowSize="DataGridRowSize.Medium"
+                            ShowHover
+                            Style="min-width: max-content;">
+                
+                <PropertyColumn Property="@(p => p.PlayerName)" Title="Player" Sortable="true" />
+
+                <PropertyColumn Property="@(p => p.Position)" Title="Position" Sortable="true" />
+                
+                <PropertyColumn Property="@(p => p.FixturesPlayed.Value)" 
+                                Title="Appearances"
+                                Align="Align.Center" 
+                                Sortable="true"
+                                IsDefaultSortColumn 
+                                InitialSortDirection="SortDirection.Descending"
+                                Tooltip>
+                    <HeaderCellTitleTemplate>
+                        <FluentIcon Value="@(new Icons.Regular.Size20.Calendar())" Color="Color.Neutral" />
+                    </HeaderCellTitleTemplate>
+                </PropertyColumn>
+
+                <PropertyColumn Property="@(p => p.GoalCount.Value)"
+                                Title="Goals"
+                                Align="Align.Center"
+                                Sortable="true"
+                                Tooltip>
+                    <HeaderCellTitleTemplate>
+                        <FluentIcon Value="@(new Icons.Regular.Size20.SportSoccer())" Color="Color.Neutral" />
+                    </HeaderCellTitleTemplate>
+                </PropertyColumn>
+                
+                <PropertyColumn Property="@(p => p.GoalAssistCount.Value)"
+                                Title="Assists"
+                                Align="Align.Center"
+                                Sortable="true"
+                                Tooltip>
+                    <HeaderCellTitleTemplate>
+                        <FluentIcon Id="GoalsIcon" Value="@(new Icons.Regular.Size20.Handshake())" Color="Color.Neutral" />
+                    </HeaderCellTitleTemplate>
+                </PropertyColumn>
+
+                <PropertyColumn Property="@(p => p.YellowCardCount.Value)"
+                                Title="Yellow Cards"
+                                Align="Align.Center"
+                                Sortable="true"
+                                HeaderTooltip="Yellow Cards"
+                                Tooltip>
+                    <HeaderCellTitleTemplate>
+                        <FluentIcon Value="@(new Icons.Filled.Size20.RectanglePortrait().WithColor("#FFCE2C"))" />
+                    </HeaderCellTitleTemplate>
+                </PropertyColumn>
+
+                <PropertyColumn Property="@(p => p.RedCardCount.Value)"
+                                Title="Red Cards"
+                                Align="Align.Center"
+                                Sortable="true" 
+                                Tooltip>
+                    <HeaderCellTitleTemplate>
+                        <FluentIcon Value="@(new Icons.Filled.Size20.RectanglePortrait().WithColor("#DD3636"))" />
+                    </HeaderCellTitleTemplate>
+                </PropertyColumn>
+
+                <TemplateColumn Align="Align.End">
+                    <FluentButton Appearance="Appearance.Accent"
+                                  IconEnd="@(new Icons.Regular.Size20.ChartMultiple())"
+                                  OnClick="@(() => PlayerSeasonStatisticsSelected(context))" />
+                </TemplateColumn>
+
+            </FluentDataGrid>
+        </div>
+    </div>
+
+    <FluentPaginator State="@Pagination" />
+    
+</FluentCard>
+
+@code {
+    private PaginationState Pagination = new PaginationState() { ItemsPerPage = 10 };
+
+    [Parameter]
+    public bool IsLoading { get; set; } = true;
+
+    [Parameter]
+    public IQueryable<PlayerSeasonStatisticsDto>? PlayerSeasonStatistics { get; set; }
+
+    [Parameter]
+    public EventCallback<PlayerSeasonStatisticsDto> OnPlayerSeasonStatisticsSelected { get; set; }
+
+    private async Task PlayerSeasonStatisticsSelected(PlayerSeasonStatisticsDto player)
+    {
+        await OnPlayerSeasonStatisticsSelected.InvokeAsync(player);
+    }
+}

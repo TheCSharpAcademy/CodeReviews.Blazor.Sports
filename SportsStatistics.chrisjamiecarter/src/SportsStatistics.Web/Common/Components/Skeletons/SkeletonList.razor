@@ -1,0 +1,38 @@
+﻿<FluentCard Style="padding: 1rem;">
+    @for (int i = 0; i < ItemCount; i++)
+    {
+        <FluentStack Orientation="Orientation.Horizontal"
+                     HorizontalAlignment="HorizontalAlignment.Stretch"
+                     VerticalAlignment="VerticalAlignment.Center"
+                     Style="padding: 0.75rem 0; border-bottom: 1px solid var(--neutral-stroke-layer-2);">
+            
+            @if (ShowAvatar)
+            {
+                <FluentSkeleton Shape="SkeletonShape.Circle" Width="40px" Height="40px" Shimmer="true" />
+            }
+            
+            <FluentStack Orientation="Orientation.Vertical" VerticalGap="0" Style="margin-left: 1rem;">
+                <FluentSkeleton Width="150px" Height="16px" Shimmer="true" />
+                <FluentSkeleton Width="100px" Height="14px" Shimmer="true" />
+            </FluentStack>
+            
+            <FluentSpacer />
+            
+            @if (ShowActions)
+            {
+                <FluentSkeleton Width="80px" Height="24px" Shimmer="true" />
+            }
+        </FluentStack>
+    }
+</FluentCard>
+
+@code {
+    [Parameter]
+    public int ItemCount { get; set; } = 10;
+
+    [Parameter]
+    public bool ShowAvatar { get; set; } = true;
+ 
+    [Parameter]
+    public bool ShowActions { get; set; } = true;
+}

@@ -1,0 +1,169 @@
+﻿@page "/admin/competitions/{seasonId:guid}"
+
+<PageTitle>Competitions</PageTitle>
+
+<FluentCard Style="overflow-y: auto;" MinimalStyle>
+
+    <FluentBreadcrumb Style="margin-bottom: 1rem;">
+        <FluentBreadcrumbItem Appearance="Appearance.Hypertext">
+            Admin
+        </FluentBreadcrumbItem>
+        <FluentBreadcrumbItem Appearance="Appearance.Hypertext" Href="@Routes.Admin.Fixtures">
+            Fixtures
+        </FluentBreadcrumbItem>
+        <FluentBreadcrumbItem Appearance="Appearance.Hypertext" Href="@Routes.Admin.Seasons">
+            Seasons
+        </FluentBreadcrumbItem>
+        <FluentBreadcrumbItem Appearance="Appearance.Accent">
+            Competitions
+        </FluentBreadcrumbItem>
+    </FluentBreadcrumb>
+
+    @switch (true)
+    {
+        case true when IsCompetitionFormVisible:
+            <CompetitionForm OnCancel="HideCompetitionForm"
+                             SelectedCompetition="@SelectedCompetition"
+                             SelectedSeason="@SelectedSeason"
+                             OnSubmit="OnSubmitAsync" />
+            break;
+        default:
+            <CompetitionList Competitions="@Competitions"
+                             OnAddCompetition="@(() => ShowCompetitionForm())"
+                             OnDeleteCompetition="OnDeleteCompetitionAsync"
+                             OnEditCompetition="ShowCompetitionForm"
+                             SelectedSeason="@SelectedSeason"
+                             IsLoading="@IsLoading" />
+            break;
+    }
+</FluentCard>
+
+@code {
+    private bool IsLoading { get; set; } = true;
+
+    private ComponentVisibilityMode CompetitionFormMode { get; set; } = ComponentVisibilityMode.Hide;
+
+    [Parameter]
+    public Guid SeasonId { get; set; }
+
+    private IQueryable<CompetitionDto>? Competitions { get; set; }
+
+    private CompetitionDto? SelectedCompetition { get; set; }
+
+    private SeasonDto? SelectedSeason { get; set; }
+
+    private bool IsCompetitionFormVisible => CompetitionFormMode == ComponentVisibilityMode.Show;
+
+    protected override async Task OnInitializedAsync()
+    {
+        IsLoading = true;
+
+        await LoadSeasonAsync(SeasonId);
+        await LoadCompetitionsAsync(SeasonId);
+
+        IsLoading = false;
+    }
+
+    private void HideCompetitionForm()
+    {
+        SelectedCompetition = null;
+        CompetitionFormMode = ComponentVisibilityMode.Hide;
+    }
+
+    private void ShowCompetitionForm(CompetitionDto? competition = null)
+    {
+        SelectedCompetition = competition;
+        CompetitionFormMode = ComponentVisibilityMode.Show;
+    }
+
+    private async Task LoadCompetitionsAsync(Guid seasonId)
+    {
+        var request = new GetAllCompetitionsQuery(seasonId);
+        var result = await Messenger.SendAsync(request);
+        if (result.IsFailure)
+        {
+            ToastService.ShowError("Unable to load competitions");
+        }
+
+        Competitions = result.Value.ToQueryable();
+    }
+
+    private async Task LoadSeasonAsync(Guid seasonId)
+    {
+        var request = new GetSeasonByIdQuery(seasonId);
+        var result = await Messenger.SendAsync(request);
+        if (result.IsFailure)
+        {
+            ToastService.ShowError("Unable to load seasons");
+        }
+
+        SelectedSeason = new SeasonDto(result.Value);
+    }
+
+    private async Task<bool> GetUserConfirmationAsync(string message, string primaryText, string secondaryText)
+    {
+        var dialog = await DialogService.ShowConfirmationAsync(message, primaryText, secondaryText);
+        var result = await dialog.Result;
+        return !result.Cancelled;
+    }
+
+    private async Task OnDeleteCompetitionAsync(CompetitionDto competition)
+    {
+        if (await GetUserConfirmationAsync($"Are you sure you want to delete <strong>{competition.Name}</strong>?", "Delete", "Cancel"))
+        {
+            await DeleteCompetitionAsync(competition.ToDeleteCommand());
+        }
+    }
+
+    private async Task OnSubmitAsync(CompetitionFormModel competition)
+    {
+        if (SelectedCompetition is null)
+        {
+            await CreateCompetitionAsync(competition.ToCreateCommand());
+        }
+        else
+        {
+            await UpdateCompetitionAsync(competition.ToUpdateCommand(SelectedCompetition.Id));
+        }
+    }
+
+    private async Task CreateCompetitionAsync(CreateCompetitionCommand command)
+    {
+        var result = await Messenger.SendAsync(command);
+        await HandleResultAsync(result, "Competition created successfully.");
+    }
+
+    private async Task DeleteCompetitionAsync(DeleteCompetitionCommand command)
+    {
+        var result = await Messenger.SendAsync(command);
+        await HandleResultAsync(result, "Competition deleted successfully.");
+    }
+
+    private async Task UpdateCompetitionAsync(UpdateCompetitionCommand command)
+    {
+        var result = await Messenger.SendAsync(command);
+        await HandleResultAsync(result, "Competition updated successfully.");
+    }
+
+    private async Task HandleResultAsync(Result result, string successMessage)
+    {
+        if (result.IsSuccess)
+        {
+            ToastService.ShowSuccess(successMessage);
+            await LoadCompetitionsAsync(SeasonId);
+            HideCompetitionForm();
+        }
+        else
+        {
+            if (result.Error is ValidationError validationError)
+            {
+                var errorDescription = string.Join(Environment.NewLine, validationError.Errors.Select(e => e.Description));
+                ToastService.ShowError(errorDescription);
+            }
+            else
+            {
+                ToastService.ShowError(result.Error.Description);
+            }
+        }
+    }
+}

@@ -1,0 +1,29 @@
+﻿<FluentCard>
+    <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Stretch">
+        
+        @for (int i = 0; i < FieldCount; i++)
+        {
+            <FluentStack Orientation="Orientation.Vertical" VerticalGap="4">
+                <FluentSkeleton Width="100px" Height="16px" Shimmer="true" />
+                <FluentSkeleton Width="100%" Height="36px" Shimmer="true" />
+            </FluentStack>
+        }
+        
+        @if (ShowButtons)
+        {
+            <FluentStack Orientation="Orientation.Horizontal" Style="margin-top: 1rem;">
+                <FluentSkeleton Width="100px" Height="36px" Shimmer="true" />
+                <FluentSkeleton Width="100px" Height="36px" Shimmer="true" />
+            </FluentStack>
+        }
+        
+    </FluentStack>
+</FluentCard>
+
+@code {
+    [Parameter]
+    public int FieldCount { get; set; } = 5;
+
+    [Parameter]
+    public bool ShowButtons { get; set; } = true;
+}

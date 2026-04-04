@@ -1,0 +1,102 @@
+﻿<FluentGrid>
+    <FluentGridItem xs="12" sm="12" md="12" lg="12" xl="12">
+        <FluentCard>
+            <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Stretch">
+                
+                <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                    <FluentIcon Value="@(new Icons.Regular.Size24.PeopleSettings())" Color="Color.Accent" />
+                    <FluentLabel Weight="FontWeight.Bold" Typo="Typography.Header">Players</FluentLabel>
+                </FluentStack>
+
+                <FluentDivider />
+
+                @if (Players is null)
+                {
+                    <FluentProgressRing />
+                }
+                else
+                {
+                    <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.SpaceBetween">
+                        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                            <FluentSelect Label="Status"
+                                          Items="@FilterOptions"
+                                          OptionText="@(f => f.GetDescription(false))"
+                                          @bind-SelectedOption="@SelectedFilter"
+                                          TOption="PlayerClubStatusFilter"
+                                          Width="200px" />
+
+                        </FluentStack>
+
+                        <FluentButton IconEnd="@(new Icons.Regular.Size20.PersonAdd())"
+                                      Appearance="Appearance.Accent"
+                                      Title="Add Player"
+                                      OnClick="Add" />
+                    </FluentStack>
+
+                    <FluentSpacer />
+
+                    <FluentDataGrid Items="@FilteredPlayers" Pagination="@Pagination" RowSize="DataGridRowSize.Medium">
+                        <PropertyColumn Property="@(p => p.SquadNumber)" Sortable="true" IsDefaultSortColumn="true" Title="Squad Number" />
+                        <PropertyColumn Property="@(p => p.Name)" Sortable="true" />
+                        <PropertyColumn Property="@(p => p.Position)" Sortable="true" />
+                        <PropertyColumn Property="@(p => p.Age)" Sortable="true" />
+                        <PropertyColumn Property="@(p => p.Nationality)" Sortable="true" />
+                        <TemplateColumn Title="Status" Sortable="true">
+                            @if (context.LeftClub)
+                            {
+                                <FluentBadge>Left club</FluentBadge>
+                            }
+                            else
+                            {
+                                <FluentBadge>At club</FluentBadge>
+                            }
+                        </TemplateColumn>
+                        <TemplateColumn Align="Align.End">
+                            <FluentButton IconEnd="@(new Icons.Regular.Size20.EditPerson())" Appearance="Appearance.Accent" OnClick="@(() => Edit(context))" Title="Edit" />
+                        </TemplateColumn>
+                    </FluentDataGrid>
+
+                    <FluentPaginator State="@Pagination" />
+                }
+
+            </FluentStack>
+        </FluentCard>
+    </FluentGridItem>
+</FluentGrid>
+
+@code {
+    private PaginationState Pagination = new PaginationState() { ItemsPerPage = 10 };
+    
+    private static PlayerClubStatusFilter[] FilterOptions => Enum.GetValues<PlayerClubStatusFilter>();
+
+    [Parameter]
+    public EventCallback OnAddPlayer { get; set; }
+
+    [Parameter]
+    public EventCallback<PlayerDto> OnEditPlayer { get; set; }
+
+    [Parameter]
+    public EventCallback OnUploadPlayers { get; set; }
+
+    [Parameter]
+    public IQueryable<PlayerDto>? Players { get; set; }
+
+    private PlayerClubStatusFilter SelectedFilter { get; set; } = PlayerClubStatusFilter.AtClub;
+    
+    private IQueryable<PlayerDto>? FilteredPlayers => SelectedFilter switch
+    {
+        PlayerClubStatusFilter.AtClub => Players?.Where(p => !p.LeftClub).AsQueryable(),
+        PlayerClubStatusFilter.LeftClub => Players?.Where(p => p.LeftClub).AsQueryable(),
+        _ => Players
+    };
+
+    private async Task Add()
+    {
+        await OnAddPlayer.InvokeAsync();
+    }
+
+    private async Task Edit(PlayerDto player)
+    {
+        await OnEditPlayer.InvokeAsync(player);
+    }
+}

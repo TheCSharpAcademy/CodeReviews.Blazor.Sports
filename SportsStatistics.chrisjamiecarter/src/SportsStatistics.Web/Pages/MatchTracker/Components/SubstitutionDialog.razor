@@ -1,0 +1,78 @@
+@implements IDialogContentComponent<SubstitutionDialogData>
+
+<EditForm Model="@Input" OnValidSubmit="ConfirmAsync" FormName="substitution-form" style="width: 100%">
+    <FluentValidator />
+        
+    @* Header *@
+    <FluentDialogHeader ShowDismiss="true">
+        <FluentStack VerticalAlignment="VerticalAlignment.Center">
+            <FluentLabel Typo="Typography.PaneHeader">
+                @Dialog.Instance.Parameters.Title
+            </FluentLabel>
+        </FluentStack>
+    </FluentDialogHeader>
+
+    @* Body *@
+    <FluentDialogBody>
+        <FluentStack Orientation="Orientation.Vertical">
+            <div class="full-width">
+                <FluentTextField Label="Player Off" Value="@Content.PlayerOff?.Display" ReadOnly Style="width: 100%" />
+            </div>
+            <div class="full-width">
+                <FluentSelect Id="PlayerOnSelect"
+                              Name="Input.PlayerOn"
+                              TOption=PlayerOptionDto
+                              Label="Player On"
+                              Items="Content.PlayerOptions"
+                              Width="100%"
+                              Placeholder="Select a player..."
+                              OptionText="(p => p.Name)"
+                              @bind-SelectedOption="Input.PlayerOn"
+                              Required />
+                <FluentValidationMessage For="() => Input.PlayerOn" class="text-danger" />
+            </div>
+        </FluentStack>
+    </FluentDialogBody>
+
+    @* Footer *@
+    <FluentDialogFooter>
+        <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="width: 100%">
+            Confirm
+        </FluentButton>
+        <FluentButton Type="ButtonType.Button" Appearance="Appearance.Stealth" Style="width: 100%" OnClick="CancelAsync">
+            Cancel
+        </FluentButton>
+    </FluentDialogFooter>
+
+</EditForm>
+
+@code {
+    [Parameter]
+    public SubstitutionDialogData Content { get; set; } = default!;
+
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
+
+    [SupplyParameterFromForm]
+    private SubstitutionFormModel Input { get; set; } = default!;
+    
+    protected override void OnInitialized()
+    {
+        Input ??= new();
+    }
+
+    private async Task ConfirmAsync()
+    {
+        var result = Content with 
+        {
+            PlayerOnId = Input.PlayerOn?.Value,
+        };
+
+        await Dialog.CloseAsync(result);
+    }
+
+    private async Task CancelAsync()
+    {
+        await Dialog.CancelAsync();
+    }
+}

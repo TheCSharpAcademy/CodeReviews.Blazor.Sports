@@ -1,0 +1,86 @@
+﻿<FluentGrid>
+    <FluentGridItem xs="12" sm="12" md="12" lg="12" xl="12">
+        <FluentCard AreaRestricted="false">
+            <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Stretch">
+
+                <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                    <FluentIcon Value="@(new Icons.Regular.Size24.CalendarMultiple())" Color="Color.Accent" />
+                    <FluentLabel Weight="FontWeight.Bold" Typo="Typography.Header">Seasons</FluentLabel>
+                </FluentStack>
+
+                <FluentDivider />
+               
+                <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End">
+                    <FluentButton IconEnd="@(new Icons.Regular.Size20.CalendarAdd())"
+                                  Appearance="Appearance.Accent"
+                                  Title="Add Season"
+                                  OnClick="OnAddClick"
+                                  Disabled="@IsLoading" />
+                </FluentStack>
+
+                <FluentSpacer />
+
+                @if (IsLoading)
+                {
+                    <SkeletonDataGrid ColumnCount="4" />
+                }
+                else
+                {
+                    <FluentDataGrid Items="@Seasons" Pagination="@Pagination" RowSize="DataGridRowSize.Medium">
+                        <PropertyColumn Property="@(p => p.Name)" Sortable="true" IsDefaultSortColumn="true" />
+                        <PropertyColumn Property="@(p => p.StartDate)" Sortable="true" Title="Start Date" />
+                        <PropertyColumn Property="@(p => p.EndDate)" Sortable="true" Title="End Date" />
+
+                        <TemplateColumn Align="Align.End">
+                            <FluentButton IconEnd="@(new Icons.Regular.Size20.Trophy())" Appearance="Appearance.Accent" OnClick="@(() => NavigateToCompetitions(context))" Title="Competitions" />
+                            <FluentButton IconEnd="@(new Icons.Regular.Size20.Edit())" Appearance="Appearance.Accent" OnClick="@(() => OnEditClick(context))" Title="Edit" />
+                            <FluentButton IconEnd="@(new Icons.Regular.Size20.Delete())" Appearance="Appearance.Accent" OnClick="@(() => OnDeleteClick(context))" Title="Delete" />
+                        </TemplateColumn>
+                    </FluentDataGrid>
+
+                    <FluentPaginator State="@Pagination" />
+                }
+                
+            </FluentStack>
+        </FluentCard>
+    </FluentGridItem>
+</FluentGrid>
+
+@code {
+    private PaginationState Pagination = new PaginationState() { ItemsPerPage = 10 };
+    
+    [Parameter]
+    public bool IsLoading { get; set; } = true;
+
+    [Parameter]
+    public EventCallback OnAddSeason { get; set; }
+
+    [Parameter]
+    public EventCallback<SeasonDto> OnDeleteSeason { get; set; }
+
+    [Parameter]
+    public EventCallback<SeasonDto> OnEditSeason { get; set; }
+
+    [Parameter]
+    public IQueryable<SeasonDto>? Seasons { get; set; }
+
+    private async Task OnAddClick()
+    {
+        await OnAddSeason.InvokeAsync();
+    }
+
+    private async Task OnDeleteClick(SeasonDto season)
+    {
+        await OnDeleteSeason.InvokeAsync(season);
+    }
+
+    private async Task OnEditClick(SeasonDto season)
+    {
+        await OnEditSeason.InvokeAsync(season);
+    }
+
+    private void NavigateToCompetitions(SeasonDto season)
+    {
+        Navigation.NavigateTo(Routes.Admin.Competitions(season.Id));
+    }
+}

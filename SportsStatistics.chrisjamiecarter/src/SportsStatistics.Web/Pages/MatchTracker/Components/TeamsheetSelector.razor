@@ -1,0 +1,117 @@
+﻿@if (IsLoading)
+{
+    <FluentGrid>
+        <FluentGridItem xs="12" sm="12" md="12" lg="8" xl="8">
+            <SkeletonTable RowCount="11" ColumnCount="3" />
+        </FluentGridItem>
+    </FluentGrid>
+    return;
+}
+
+<FluentGrid>
+    <FluentGridItem xs="12" sm="12" md="12" lg="8" xl="8">
+        <FluentCard AreaRestricted="false">
+            <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Stretch">
+                
+                <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                    <FluentIcon Value="@(new Icons.Regular.Size24.PeopleTeam())" Color="Color.Accent" />
+                    <FluentLabel Weight="FontWeight.Bold" Typo="Typography.Header">Select Starting XI</FluentLabel>
+                </FluentStack>
+                   
+                <FluentDivider />
+
+                <EditForm Model="@Input" OnValidSubmit="ConfirmTeamsheet" FormName="teamsheet-form">
+                    <FluentValidator />
+
+                    <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Stretch">
+                        <FluentDataGrid Items="@OrderedPlayers" ShowHover="@true">
+                            <SelectColumn TGridItem="PlayerDto" SelectMode="DataGridSelectMode.Multiple" SelectFromEntireRow="@true" @bind-SelectedItems="Input.Players" />
+                            <PropertyColumn Property="@(player => player.PositionName)" Title="Position" />
+                            <PropertyColumn Property="@(player => player.Name)" />
+                        </FluentDataGrid>
+                        <FluentValidationMessage For="() => Input.Players" />
+                        <FluentSpacer />
+                        <FluentLabel Typo="Typography.Body" Weight="FontWeight.Normal">
+                            Choose 11 players for today's fixture.
+                        </FluentLabel>
+                        <FluentLabel Typo="Typography.Body" Weight="FontWeight.Normal">
+                            <b>Selected:</b> @SelectedPlayersCount/@PlayersRequired players.
+                        </FluentLabel>
+                        <FluentSpacer />
+                        <FluentStack Orientation="Orientation.Horizontal">
+                            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="width: 100%">
+                                Confirm Teamsheet
+                            </FluentButton>
+                            <FluentButton Type="ButtonType.Button" Appearance="Appearance.Stealth" Style="width: 100%" OnClick="Cancel">
+                                Cancel
+                            </FluentButton>
+                        </FluentStack>
+                    </FluentStack>
+                </EditForm>
+
+            </FluentStack>
+        </FluentCard>
+    </FluentGridItem>
+</FluentGrid>
+
+@code {
+    [Parameter]
+    public bool IsLoading { get; set; } = true;
+
+    [Parameter]
+    public List<PlayerDto> Players { get; set; } = [];
+
+    [Parameter]
+    public EventCallback<IReadOnlyList<PlayerDto>> OnTeamsheetConfirmed { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancelled { get; set; }
+
+    [SupplyParameterFromForm]
+    private TeamsheetFormModel Input { get; set; } = default!;
+
+    private const int PlayersRequired = 11;
+
+    private IQueryable<PlayerDto> OrderedPlayers => Players.OrderBy(player => player.PositionId).ThenBy(player => player.Name).AsQueryable();
+
+    private int SelectedPlayersCount => Input.Players.Count();
+
+    private bool IsValid => SelectedPlayersCount == PlayersRequired;
+    
+    protected override void OnInitialized()
+    {
+        Input ??= new();
+    }
+
+    private async Task ConfirmTeamsheet()
+    {
+        if (IsValid)
+        {
+            await OnTeamsheetConfirmed.InvokeAsync(Input.Players.ToList());
+        }
+        else
+        {
+            ToastService.ShowError("Teamsheet must be exactly 11 players");
+        }
+    }
+
+    private async Task Cancel()
+    {
+        await OnCancelled.InvokeAsync();
+    }
+
+    public class TeamsheetFormModel
+    {
+        public IEnumerable<PlayerDto> Players { get; set; } = [];
+    }
+
+    internal sealed class TeamsheetFormModelValidator : AbstractValidator<TeamsheetFormModel>
+    {
+        public TeamsheetFormModelValidator()
+        {
+            RuleFor(c => c.Players)
+                .Must(players => players.Count() == PlayersRequired)
+                .WithMessage("Teamsheet must be exactly 11 players.");
+        }
+    }
+}

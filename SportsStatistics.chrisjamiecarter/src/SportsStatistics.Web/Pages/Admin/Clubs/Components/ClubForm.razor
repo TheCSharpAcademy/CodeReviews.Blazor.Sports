@@ -1,0 +1,113 @@
+﻿@if (IsLoading)
+{
+    <FluentGrid>
+        <FluentGridItem xs="12" sm="12" md="12" lg="6" xl="6">
+            <SkeletonForm FieldCount="1" />
+        </FluentGridItem>
+    </FluentGrid>
+    return;
+}
+
+<FluentGrid>
+    <FluentGridItem xs="12" sm="12" md="12" lg="6" xl="6">
+        <FluentCard AreaRestricted="false">
+            <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Stretch">
+                
+                <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                    <FluentIcon Value="@(new Icons.Regular.Size24.Building())" Color="Color.Accent" />
+                    <FluentLabel Weight="FontWeight.Bold" Typo="Typography.Header">Edit Club</FluentLabel>
+                </FluentStack>
+
+                <FluentDivider />
+
+                @if (Input is not null)
+                {
+                    <EditForm Model="@Input" OnValidSubmit="@HandleValidSubmitAsync" FormName="club-form" style="width: 100%">
+                        <FluentValidator />
+
+                        <FluentStack Orientation="Orientation.Vertical">
+                            <div class="full-width">
+                                <FluentTextField Id="Input.Name"
+                                                 Name="Input.Name"
+                                                 Label="Name"
+                                                 @bind-Value="Input.Name"
+                                                 Immediate 
+                                                 Placeholder="Club Name"
+                                                 Required
+                                                 Style="width: 100%" />
+                                <FluentValidationMessage For="() => Input.Name" class="text-danger" />
+                            </div>
+                            <FluentSpacer />
+                            <FluentStack Orientation="Orientation.Horizontal">
+                                <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="width: 100%" Loading="IsSubmitting" Disabled="AreButtonsDisabled">
+                                    Update
+                                </FluentButton>
+                                <FluentButton Type="ButtonType.Button" Appearance="Appearance.Stealth" Style="width: 100%" OnClick="HandleCancelAsync" Disabled="AreButtonsDisabled">
+                                    Cancel
+                                </FluentButton>
+                            </FluentStack>
+                        </FluentStack>
+                    </EditForm>
+                }
+                else
+                {
+                    <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+                        <FluentIcon Value="@(new Icons.Regular.Size48.ShieldError())" Color="Color.Error" />
+                        <FluentLabel>Unable to load club data.</FluentLabel>
+                    </FluentStack>
+                    <FluentSpacer />
+                    <FluentButton Appearance="Appearance.Accent"
+                                  IconStart="@(new Icons.Regular.Size20.Home())"
+                                  OnClick="@(() => Navigation.NavigateTo(Routes.Home))">
+                        Return to Home
+                    </FluentButton>
+                }
+            </FluentStack>
+        </FluentCard>
+    </FluentGridItem>
+</FluentGrid>
+
+@code {
+    private bool IsSubmitting = false;
+
+    [Parameter]
+    public bool IsLoading { get; set; } = true;
+
+    [Parameter]
+    public ClubDto? Club { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    [Parameter]
+    public EventCallback<UpdateClubCommand> OnSubmit { get; set; }
+
+    [SupplyParameterFromForm]
+    private ClubFormModel? Input { get; set; }
+
+    private bool AreButtonsDisabled => Input?.Name.Trim().Equals(Club?.Name.Trim(), StringComparison.OrdinalIgnoreCase) ?? true;
+
+    protected override void OnParametersSet()
+    {
+        if (Club is not null && !IsSubmitting)
+        {
+            Input = Club.ToFormModel();
+        }
+    }
+
+    private async Task HandleCancelAsync()
+    {
+        await OnCancel.InvokeAsync();
+    }
+
+    private async Task HandleValidSubmitAsync()
+    {
+        if (Club is null || Input is null) return;
+
+        IsSubmitting = true;
+
+        await OnSubmit.InvokeAsync(Input.ToUpdateCommand(Club.Id));
+
+        IsSubmitting = false;
+    }
+}

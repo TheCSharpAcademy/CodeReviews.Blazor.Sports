@@ -1,0 +1,119 @@
+@if (CurrentMatchPeriod != MatchPeriod.FullTime)
+{
+    <FluentStack Orientation="Orientation.Vertical">
+
+        <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+                <FluentButton OnClick="HomeGoalClicked" Disabled="@(!CurrentMatchPeriod.IsPlayingPeriod())">
+                    Home Goal
+                </FluentButton>
+            </FluentStack>
+        
+            @if (CurrentMatchPeriod == MatchPeriod.PreMatch)
+            {
+                <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+                    <FluentButton OnClick="StartFirstHalf">Start First Half</FluentButton>
+                </FluentStack>
+            }
+
+            @if (CurrentMatchPeriod == MatchPeriod.FirstHalf)
+            {
+                <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+                    <FluentButton OnClick="FinishFirstHalf">Finish First Half</FluentButton>
+                </FluentStack>
+            }
+
+            @if (CurrentMatchPeriod == MatchPeriod.HalfTime)
+            {
+                <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+                    <FluentButton OnClick="StartSecondHalf">Start Second Half</FluentButton>
+                </FluentStack>
+            }
+
+            @if (CurrentMatchPeriod == MatchPeriod.SecondHalf)
+            {
+                <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+                    <FluentButton OnClick="FinishSecondHalf">Finish Second Half</FluentButton>
+                </FluentStack>
+            }
+
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+                <FluentButton OnClick="AwayGoalClicked" Disabled="@(!CurrentMatchPeriod.IsPlayingPeriod())">
+                    Away Goal
+                </FluentButton>
+            </FluentStack>
+
+        </FluentStack>
+
+    </FluentStack>
+}
+
+@code {
+    [Parameter] public MatchPeriod CurrentMatchPeriod { get; set; } = MatchPeriod.PreMatch;
+
+    [Parameter] public bool IsHomeGame { get; set; }
+
+    [Parameter] public List<PlayerDto> StartingPlayers { get; set; } = [];
+
+    [Parameter] public EventCallback OnStartFirstHalf { get; set; }
+
+    [Parameter] public EventCallback OnFinishFirstHalf { get; set; }
+
+    [Parameter] public EventCallback OnStartSecondHalf { get; set; }
+
+    [Parameter] public EventCallback OnFinishSecondHalf { get; set; }
+
+    [Parameter] public EventCallback<GoalDialogData> OnOurClubGoal { get; set; }
+
+    [Parameter] public EventCallback<GoalDialogData> OnOpponentGoal { get; set; }
+
+    private bool ShowGoalDialog { get; set; }
+    private bool ShowGoalDialogForHomeGoal { get; set; }
+
+    private async Task StartFirstHalf() => await OnStartFirstHalf.InvokeAsync();
+    private async Task FinishFirstHalf() => await OnFinishFirstHalf.InvokeAsync();
+    private async Task StartSecondHalf() => await OnStartSecondHalf.InvokeAsync();
+    private async Task FinishSecondHalf() => await OnFinishSecondHalf.InvokeAsync();
+
+    private async Task RecordGoal(GoalType goalType)
+    {
+        var scorerOptions = StartingPlayers.ToOptions();
+        var assisterOptions = scorerOptions.Prepend(new PlayerOptionDto(null, "No Assist"));
+
+        var data = new GoalDialogData(goalType, false, scorerOptions, assisterOptions, null, null, DateTime.UtcNow);
+
+        var dialog = await DialogService.ShowDialogAsync<GoalDialog>(data, new DialogParameters()
+        {
+            Title = goalType == GoalType.TeamGoal ? "Record Team Goal" : "Record Opponent Goal",
+            PreventDismissOnOverlayClick = true,
+            PreventScroll = true,
+        });
+
+        var result = await dialog.Result;
+
+        if (!result.Cancelled && result.Data is not null)
+        {
+            var goalResult = result.Data as GoalDialogData;
+
+            if (goalType == GoalType.TeamGoal)
+            {
+                await OnOurClubGoal.InvokeAsync(goalResult);
+            }
+            else
+            {
+                await OnOpponentGoal.InvokeAsync(goalResult);
+            }
+        }
+    }
+
+    private async Task HomeGoalClicked()
+    {
+        await RecordGoal(IsHomeGame ? GoalType.TeamGoal : GoalType.OppositionGoal);
+    }
+
+    private async Task AwayGoalClicked()
+    {
+        await RecordGoal(IsHomeGame ? GoalType.OppositionGoal : GoalType.TeamGoal);
+    }
+}

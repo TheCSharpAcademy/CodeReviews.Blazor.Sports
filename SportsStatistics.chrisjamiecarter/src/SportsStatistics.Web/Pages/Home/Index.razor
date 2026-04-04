@@ -1,0 +1,196 @@
+﻿@page "/"
+
+<PageTitle>Home</PageTitle>
+
+<FluentCard Style="overflow-y: auto;" MinimalStyle>
+    
+    <FluentBreadcrumb Style="margin-bottom: 1rem;">
+        <FluentBreadcrumbItem Appearance="Appearance.Accent">
+            Home
+        </FluentBreadcrumbItem>
+    </FluentBreadcrumb>
+
+    <FluentGrid>
+
+        <!-- Previous Fixture Card -->
+        <FluentGridItem xs="12" sm="12" md="12" lg="6" xl="4">
+            <FixtureCard Title="Previous Fixture"
+                         Icon="@(new Icons.Regular.Size24.CalendarReply())"
+                         Fixture="@PreviousFixture"
+                         ClubName="@ClubName"
+                         EmptyMessage="No previous fixtures"
+                         IsLoading="@IsLoading" />
+        </FluentGridItem>
+
+        <!-- Today's Fixture Card -->
+        <FluentGridItem xs="12" sm="12" md="12" lg="6" xl="4">
+            <FixtureCard Title="Today's Fixture"
+                         Icon="@(new Icons.Regular.Size24.CalendarDate())"
+                         Fixture="@TodaysFixture"
+                         ClubName="@ClubName"
+                         EmptyMessage="No fixture today"
+                         IsLoading="@IsLoading" />
+        </FluentGridItem>
+
+        <!-- Next Fixture Card -->
+        <FluentGridItem xs="12" sm="12" md="12" lg="6" xl="4">
+            <FixtureCard Title="Next Fixture"
+                         Icon="@(new Icons.Regular.Size24.CalendarArrowRight())"
+                         Fixture="@NextFixture"
+                         ClubName="@ClubName"
+                         EmptyMessage="No upcoming fixtures"
+                         IsLoading="@IsLoading" />
+        </FluentGridItem>
+
+        <!-- Recent Form Card -->
+        <FluentGridItem xs="12" sm="12" md="12" lg="6" xl="4">
+            <RecentFormCard Results="RecentForm?.Items"
+                            IsLoading="@IsLoading" />
+        </FluentGridItem>
+        
+        <!-- Top Scorers Card -->
+        <FluentGridItem xs="12" sm="12" md="12" lg="6" xl="4">
+            <TopPlayerStatsCard Title="Top Scorers"
+                                Icon="@(new Icons.Regular.Size24.SportSoccer())"
+                                TopPlayerStats="@TopScorers"
+                                EmptyMessage="No goalscorers"
+                                IsLoading="@IsLoading" />
+        </FluentGridItem>
+        
+        <!-- Top Assists Card -->
+        <FluentGridItem xs="12" sm="12" md="12" lg="6" xl="4">
+            <TopPlayerStatsCard Title="Top Assists"
+                                Icon="@(new Icons.Regular.Size24.Handshake())"
+                                TopPlayerStats="@TopAssists"
+                                EmptyMessage="No assists"
+                                IsLoading="@IsLoading" />
+        </FluentGridItem>
+    </FluentGrid>
+
+</FluentCard>
+
+@code {
+    private bool IsLoading { get; set; } = true;
+
+    private FixtureCardDto? PreviousFixture { get; set; }
+    private FixtureCardDto? TodaysFixture { get; set; }
+    private FixtureCardDto? NextFixture { get; set; }
+    private RecentFormCardDto? RecentForm { get; set; }
+    private TopPlayerStatsCardDto? TopScorers { get; set; }
+    private TopPlayerStatsCardDto? TopAssists { get; set; }
+    private string ClubName { get; set; } = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        IsLoading = true;
+
+        ClubName = await ClubNameService.GetClubNameAsync();
+
+        var recentFormResult = await Messenger.SendAsync(new GetRecentFormQuery());
+        if (recentFormResult.IsSuccess)
+        {
+            var recentForm = recentFormResult.Value;
+            RecentForm = new RecentFormCardDto(
+                recentForm.Select(item => new RecentFormItemDto(
+                    item.Outcome.Name,
+                    item.Opponent,
+                    item.HomeGoals,
+                    item.AwayGoals)).ToList());
+        }
+
+        var todayStart = new DateTime(DateOnly.FromDateTime(DateTime.Now), TimeOnly.MinValue);
+        var previousFixtureResult = await Messenger.SendAsync(new GetPreviousFixtureQuery(todayStart));
+        if (previousFixtureResult.IsSuccess)
+        {
+            var fixture = previousFixtureResult.Value;
+            PreviousFixture = new FixtureCardDto(
+                fixture.Id,
+                fixture.CompetitionName,
+                fixture.Opponent,
+                fixture.Location.Name,
+                fixture.KickoffTimeUtc.ToLocalTime(),
+                fixture.Score.HomeGoals,
+                fixture.Score.AwayGoals,
+                fixture.Outcome.Name);
+        }
+
+        var todaysFixtureResult = await Messenger.SendAsync(new GetTodaysFixtureQuery());
+        if (todaysFixtureResult.IsSuccess)
+        {
+            var fixture = todaysFixtureResult.Value;
+            TodaysFixture = new FixtureCardDto(
+                fixture.Id,
+                fixture.CompetitionName,
+                fixture.Opponent,
+                fixture.Location.Name,
+                fixture.KickoffTimeUtc.ToLocalTime(),
+                fixture.Score.HomeGoals,
+                fixture.Score.AwayGoals,
+                fixture.Outcome == Outcome.None ? fixture.Status.Name : fixture.Outcome.Name);
+        }
+
+        var todayEnd = new DateTime(DateOnly.FromDateTime(DateTime.Now), TimeOnly.MaxValue);
+        var nextFixtureResult = await Messenger.SendAsync(new GetNextFixtureQuery(todayEnd));
+        if (nextFixtureResult.IsSuccess)
+        {
+            var fixture = nextFixtureResult.Value;
+            NextFixture = new FixtureCardDto(
+                fixture.Id,
+                fixture.CompetitionName,
+                fixture.Opponent,
+                fixture.Location.Name,
+                fixture.KickoffTimeUtc.ToLocalTime(),
+                0,
+                0,
+                fixture.Status.Name);
+        }
+
+        var currentSeasonResult = await Messenger.SendAsync(new GetCurrentSeasonQuery());
+        if (currentSeasonResult.IsSuccess)
+        {
+            var currentSeason = currentSeasonResult.Value;
+
+            var topScorersResult = await Messenger.SendAsync(new GetTopScorersBySeasonQuery(currentSeason.SeasonId));
+            if (topScorersResult.IsSuccess)
+            {
+                var topScorers = topScorersResult.Value;
+                TopScorers = new TopPlayerStatsCardDto(
+                    "Goals",
+                    topScorers
+                        .Select(player => new TopPlayerStatDto(
+                            player.PlayerId,
+                            player.PlayerName,
+                            player.Position.Name,
+                            player.GoalCount))
+                        .ToList());
+            }
+
+            var topAssistsResult = await Messenger.SendAsync(new GetTopAssistsBySeasonQuery(currentSeason.SeasonId));
+            if (topAssistsResult.IsSuccess)
+            {
+                var topAssists = topAssistsResult.Value;
+                TopAssists = new TopPlayerStatsCardDto(
+                    "Assists",
+                    topAssists
+                        .Select(player => new TopPlayerStatDto(
+                            player.PlayerId,
+                            player.PlayerName,
+                            player.Position.Name,
+                            player.AssistCount))
+                        .ToList());
+            }
+        }
+
+        IsLoading = false;
+    }
+
+    private string GetHomeTeamName(FixtureCardDto fixture) =>
+        fixture.Location == Location.Home.Name || fixture.Location == Location.Neutral.Name
+            ? ClubName
+            : fixture.Opponent;
+
+    private string GetAwayTeamName(FixtureCardDto fixture) =>
+        fixture.Location == Location.Home.Name || fixture.Location == Location.Neutral.Name
+            ? fixture.Opponent
+            : ClubName;
+}

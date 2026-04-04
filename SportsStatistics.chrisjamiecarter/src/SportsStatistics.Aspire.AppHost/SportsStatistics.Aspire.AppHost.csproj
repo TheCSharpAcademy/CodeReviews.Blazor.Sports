@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <Sdk Name="Aspire.AppHost.Sdk" Version="9.3.1" />
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <UserSecretsId>f66dc063-268b-4cb5-91e4-22171932c406</UserSecretsId>
+    <StartupObject></StartupObject>
+    <ApplicationIcon>sports-statistics.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="sports-statistics.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" />
+    <PackageReference Include="Aspire.Hosting.SqlServer" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SportsStatistics.Application\SportsStatistics.Application.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\SportsStatistics.Aspire.Constants\SportsStatistics.Aspire.Constants.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\SportsStatistics.Domain\SportsStatistics.Domain.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\SportsStatistics.Infrastructure\SportsStatistics.Infrastructure.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\SportsStatistics.Aspire.ServiceDefaults\SportsStatistics.Aspire.ServiceDefaults.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\SportsStatistics.Tools.DatabaseMigrator\SportsStatistics.Tools.DatabaseMigrator.csproj" AspireProjectMetadataTypeName="DatabaseMigratorProject" />
+    <ProjectReference Include="..\SportsStatistics.Tools.DatabaseSeeder\SportsStatistics.Tools.DatabaseSeeder.csproj" AspireProjectMetadataTypeName="DatabaseSeederProject"/>
+    <ProjectReference Include="..\SportsStatistics.Web\SportsStatistics.Web.csproj" AspireProjectMetadataTypeName="WebProject" />
+  </ItemGroup>
+
+</Project>

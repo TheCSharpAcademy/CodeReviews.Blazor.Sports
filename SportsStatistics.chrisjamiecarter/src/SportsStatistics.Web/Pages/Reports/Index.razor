@@ -1,0 +1,176 @@
+﻿@page "/reports"
+
+<PageTitle>Reports</PageTitle>
+
+<FluentCard Style="overflow-y: auto;" MinimalStyle>
+    
+    <FluentBreadcrumb Style="margin-bottom: 1rem;">
+        <FluentBreadcrumbItem Appearance="Appearance.Accent">
+            Reports
+        </FluentBreadcrumbItem>
+    </FluentBreadcrumb>
+
+    <FluentStack Orientation="Orientation.Vertical">
+
+        @if (IsLoading)
+        {
+            <FluentStack Orientation="Orientation.Horizontal"
+                         HorizontalAlignment="HorizontalAlignment.Stretch"
+                         VerticalAlignment="VerticalAlignment.Center">
+                <FluentLabel>Seasons</FluentLabel>
+                <FluentSkeleton Width="200px" Height="32px" Shimmer="true" />
+            </FluentStack>
+        }
+        else
+        {
+            <SeasonSelector Seasons="@Seasons"
+                            SelectedSeason="@SelectedSeason"
+                            OnSelectedSeasonChanged="HandleSelectedSeasonChangedAsync" />
+        }
+
+        @if (SelectedSeason is not null)
+        {
+            <FluentTabs @bind-ActiveTabId="@ActiveTabId" Width="100%" Size="TabSize.Large">
+                    
+                <FluentTab Id="tab-1" Label="Season Statistics" Style="">
+                    <StatisticsView PlayerSeasonStatistics="@PlayerSeasonStatistics"
+                                    OnPlayerSeasonStatisticsSelected="HandlePlayerSeasonStatisticsSelectedAsync"
+                                    IsLoading="@IsLoadingStatistics" />
+                </FluentTab>
+
+                <FluentTab Id="tab-2" Label="Fixture Statistics">
+                    <FixtureBreakdown SeasonFixtures="@SelectedSeasonFixtures"
+                                      OnFixtureSelected="HandleFixtureSelectedAsync"
+                                      IsLoading="@IsLoadingStatistics" />
+                </FluentTab>
+
+            </FluentTabs>
+        }
+
+    </FluentStack>
+
+</FluentCard>
+
+@code {
+    private bool IsLoading = true;
+    private bool IsLoadingStatistics = true;
+
+    private List<SeasonDto> Seasons = [];
+    private SeasonDto? SelectedSeason;
+    private IQueryable<PlayerSeasonStatisticsDto>? PlayerSeasonStatistics;
+    private IQueryable<FixtureDto>? SelectedSeasonFixtures;
+    private PlayerSeasonStatisticsDto? SelectedPlayerSeasonStatistics;
+    private string ActiveTabId = "tab-1";
+
+    protected override async Task OnInitializedAsync()
+    {
+        IsLoading = true;
+
+        await LoadSeasonsAsync();
+
+        IsLoading = false;
+    }
+
+    private async Task LoadFixturesAsync(SeasonDto season)
+    {
+        var request = new GetCompletedFixturesBySeasonIdQuery(season.SeasonId);
+        var result = await Messenger.SendAsync(request);
+
+        if (result.IsFailure)
+        {
+            SelectedSeasonFixtures = null;
+            ToastService.ShowError("Unable to load fixtures");
+            return;
+        }
+
+        SelectedSeasonFixtures = result.Value.ToQueryable(await ClubNameService.GetClubNameAsync());
+    }
+
+    private async Task LoadPlayerSeasonStatisticsAsync(SeasonDto season)
+    {
+        var request = new GetPlayerSeasonStatisticsQuery(season.SeasonId);
+        var result = await Messenger.SendAsync(request);
+
+        if (result.IsFailure)
+        {
+            PlayerSeasonStatistics = null;
+            ToastService.ShowError("Unable to load player season statistics");
+            return;
+        }
+
+        PlayerSeasonStatistics = result.Value.ToQueryable();
+    }
+
+    private async Task LoadSeasonsAsync()
+    {
+        var request = new GetSeasonsQuery();
+        var result = await Messenger.SendAsync(request);
+
+        if (result.IsFailure)
+        {
+            Seasons = [];
+            SelectedSeason = null;
+            ToastService.ShowError("Unable to load seasons");
+            return;
+        }
+
+        Seasons = result.Value.ToDto();
+
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        var defaultSeason = Seasons.FirstOrDefault(season => season.StartDate <= today && season.EndDate >= today);
+        if (defaultSeason is not null)
+        {
+            await HandleSelectedSeasonChangedAsync(defaultSeason);
+        }
+    }
+
+    private async Task HandleSelectedSeasonChangedAsync(SeasonDto season)
+    {
+        SelectedSeason = season;
+        IsLoadingStatistics = true;
+
+        await LoadFixturesAsync(season);
+        await LoadPlayerSeasonStatisticsAsync(season);
+
+        IsLoadingStatistics = false;
+    }
+
+    private async Task HandlePlayerSeasonStatisticsSelectedAsync(PlayerSeasonStatisticsDto player)
+    {
+        SelectedPlayerSeasonStatistics = player;
+        var dialog = await DialogService.ShowDialogAsync<PlayerChartDialog>(player, new DialogParameters()
+        {
+            Title = player.Title,
+            PreventDismissOnOverlayClick = true,
+            PreventScroll = true,
+            Width = "75%",
+        });
+
+        await dialog.Result;
+    }
+
+    private async Task HandleFixtureSelectedAsync(FixtureDto fixture)
+    {
+        var request = new GetPlayerFixtureStatisticsQuery(fixture.FixtureId);
+        var result = await Messenger.SendAsync(request);
+
+        if (result.IsFailure)
+        {
+            SelectedSeasonFixtures = null;
+            ToastService.ShowError("Unable to load fixture statistics");
+            return;
+        }
+
+        var response = result.Value.ToQueryable();
+
+        var dialog = await DialogService.ShowDialogAsync<FixtureDetailsDialog>(response, new DialogParameters()
+        {
+            Title = fixture.Title,
+            PreventDismissOnOverlayClick = true,
+            PreventScroll = true,
+            Width = "75%",
+        });
+
+        await dialog.Result;
+    }
+}

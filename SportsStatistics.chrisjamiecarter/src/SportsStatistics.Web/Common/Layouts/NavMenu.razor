@@ -1,0 +1,64 @@
+﻿@using SportsStatistics.Application.Abstractions.Messaging
+@using SportsStatistics.Web.Abstractions.Messaging
+@implements IDisposable
+
+@inject NavigationManager NavigationManager
+
+<div class="navmenu">
+    <input type="checkbox" title="Menu expand/collapse toggle" id="navmenu-toggle" class="navmenu-icon" />
+    <label for="navmenu-toggle" class="navmenu-icon"><FluentIcon Value="@(new Icons.Regular.Size20.Navigation())" Color="Color.Fill" /></label>
+    <nav class="sitenav" aria-labelledby="main-menu">
+
+        <FluentNavMenu Id="main-menu" Collapsible="true" Width="250" Title="Navigation menu" @bind-Expanded="expanded" CustomToggle="true">
+            <AuthorizeView>
+                <Authorized>
+                    <FluentNavLink Href="@(Routes.Home)" Match="NavLinkMatch.All" Icon="@(new Icons.Regular.Size20.Home())" IconColor="Color.Accent">Home</FluentNavLink>
+
+                    <AuthorizeView Context="adminAuth" Policy="@(Policies.Administrator)">
+                        <FluentNavGroup Icon="@(new Icons.Regular.Size20.Settings())" IconColor="Color.Accent" Title="Admin">
+                            <FluentNavLink Href="@(Routes.Admin.Club)" Icon="@(new Icons.Regular.Size20.Building())" IconColor="Color.Accent">Club</FluentNavLink>
+                            <FluentNavLink Href="@(Routes.Admin.Players)" Icon="@(new Icons.Regular.Size20.PeopleSettings())" IconColor="Color.Accent">Players</FluentNavLink>
+                            <FluentNavLink Href="@(Routes.Admin.Fixtures)" Icon="@(new Icons.Regular.Size20.CalendarSettings())" IconColor="Color.Accent">Fixtures</FluentNavLink>
+                        </FluentNavGroup>
+                    </AuthorizeView>
+
+                    <AuthorizeView Context="trackerAuth" Policy="@(Policies.MatchTracker)">
+                        <FluentNavLink Href="@(Routes.MatchTracker)" Icon="@(new Icons.Regular.Size20.Timer())" IconColor="Color.Accent">Match Tracker</FluentNavLink>
+                    </AuthorizeView>
+
+                    <AuthorizeView Context="reportsAuth" Policy="@(Policies.ReportsViewer)">
+                        <FluentNavLink Href="@(Routes.Reports)" Icon="@(new Icons.Regular.Size20.ChartMultiple())" IconColor="Color.Accent">Reports</FluentNavLink>
+                    </AuthorizeView>
+
+                    <FluentNavLink Href="@(Routes.Identity.Signout)" Icon="@(new Icons.Regular.Size20.DoorArrowRight())" IconColor="Color.Accent">Sign Out</FluentNavLink>
+                </Authorized>
+                <NotAuthorized>
+                    <FluentNavLink Href="@(Routes.Identity.Signin)" Icon="@(new Icons.Regular.Size20.PersonArrowRight())" IconColor="Color.Accent">Sign In</FluentNavLink>
+                </NotAuthorized>
+            </AuthorizeView>
+
+        </FluentNavMenu>
+    </nav>
+</div>
+
+@code {
+    private bool expanded = true;
+    private string? currentUrl;
+
+    protected override void OnInitialized()
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+}

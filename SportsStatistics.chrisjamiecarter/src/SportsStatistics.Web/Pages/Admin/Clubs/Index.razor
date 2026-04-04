@@ -1,0 +1,87 @@
+﻿@page "/admin/club"
+
+<PageTitle>Club</PageTitle>
+
+<FluentCard Style="overflow-y: auto;" MinimalStyle>
+
+    <FluentBreadcrumb Style="margin-bottom: 1rem;">
+        <FluentBreadcrumbItem Appearance="Appearance.Hypertext">
+            Admin
+        </FluentBreadcrumbItem>
+        <FluentBreadcrumbItem Appearance="Appearance.Accent">
+            Club
+        </FluentBreadcrumbItem>
+    </FluentBreadcrumb>
+
+    <ClubForm Club="@Club"
+              OnCancel="CancelUpdate"
+              OnSubmit="UpdateClubAsync"
+              IsLoading="@IsLoading" />
+
+</FluentCard>
+
+@code {
+    private bool IsLoading { get; set; } = true;
+
+    private ClubDto? Club { get; set; }
+
+    private ClubFormModel? ClubFormModel { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        IsLoading = true;
+
+        await LoadClubAsync();
+
+        IsLoading = false;
+    }
+
+    private async Task LoadClubAsync()
+    {
+        ClubFormModel ??= new();
+
+        var request = new GetClubQuery();
+        var result = await Messenger.SendAsync(request);
+        
+        if (result.IsSuccess)
+        {
+            Club = result.Value.ToDto();
+            ClubFormModel = Club.ToFormModel();
+        }
+        else
+        {
+            ToastService.ShowError("Unable to load club");
+        }
+    }
+
+    private void CancelUpdate()
+    {
+        if (Club is not null)
+        {
+            ClubFormModel = Club.ToFormModel();
+        }
+    }
+
+    private async Task UpdateClubAsync(UpdateClubCommand command)
+    {
+        var result = await Messenger.SendAsync(command);
+        if (result.IsSuccess)
+        {
+            ToastService.ShowSuccess("Club updated successfully.");
+        }
+        else
+        {
+            if (result.Error is ValidationError validationError)
+            {
+                var errorDescription = string.Join(Environment.NewLine, validationError.Errors.Select(e => e.Description));
+                ToastService.ShowError(errorDescription);
+            }
+            else
+            {
+                ToastService.ShowError(result.Error.Description);
+            }
+        }
+
+        Navigation.Refresh(true);
+    }
+}
